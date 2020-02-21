@@ -28,17 +28,33 @@ def one_hot_insert(data, column_no):
     
     return data_return.tolist()
 
+def normalize(data):
+    return_data = np.asarray(data).astype(float)
+    max_values = np.amax(return_data, axis = 0)
+    min_values = np.amin(return_data, axis = 0)
+    difference = max_values - min_values
+    
+    #Remove columns where values are constant, done on min and diff arrays too, so dimensions fit for normalization.
+    useless = [x for x in range(0, len(difference)) if difference[x] == 0]
+    min_values = np.delete(min_values, useless)
+    difference = np.delete(difference, useless)
+    return_data = np.delete(return_data, useless, axis = 1)
+    
+    return_data = (return_data - min_values) / difference
+    return return_data
+
 def process_data(data_values, data_attributes):
     for i in range(len(data_attributes), 1, -1):
         if(type(data_attributes[-i][1]) == list):
             data_values = one_hot_insert(data_values, -i)
     
     #Assign the class values
+    predictions = []
     for row in data_values:
-        row[-1] = int(row[-1] == "abnormal")
-        
-    return data_values
-
+        predictions.append(int(row.pop(-1) == "anomaly"))
+       
+    data_values = normalize(data_values)
+    return data_values, predictions
 
 def load_and_process_data(datapath):
     file = arff.load(open(datapath))
@@ -46,9 +62,8 @@ def load_and_process_data(datapath):
     attributes = file['attributes']
     return process_data(data_values, attributes)
 
-            
-            
-            
+
+    
             
 
 
