@@ -21,7 +21,6 @@ def one_hot_encode(column):
 
 def one_hot_insert(data, column_no):
     one_hot_values = one_hot_encode([row[column_no] for row in data])
-    
     #If you run into memory issues, rewrite to use list methods instead of numpy
     left, delete, right = np.split(data, [column_no, column_no+1], axis = 1)
     data_return = np.concatenate((left, one_hot_values, right), axis = 1)

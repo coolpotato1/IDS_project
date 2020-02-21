@@ -8,9 +8,6 @@ import preprocessing as pre
 import numpy as np
 from sklearn.decomposition import PCA
 
-DATA_PATH = "Datasets/KDDTrain+_20Percent.arff"
-data, predictions = pre.load_and_process_data(DATA_PATH)
-pca = PCA(n_components = 8)
-reduced_data = pca.fit_transform(data)
-print(pca.explained_variance_ratio_)
-print(np.sum(pca.explained_variance_ratio_))
+def pca(data, n_components = 8):
+    pca = PCA(n_components)
+    return pca.fit_transform(data)
