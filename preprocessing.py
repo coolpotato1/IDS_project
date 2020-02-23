@@ -9,6 +9,7 @@ import arff
 import gc
 import sys
 import numpy as np
+from itertools import islice
 
 def one_hot_encode(column):
     uniqueValues = set(column)
@@ -42,6 +43,11 @@ def normalize(data):
     return_data = (return_data - min_values) / difference
     return return_data
 
+def normalize(values, predictions):
+    temp_values = np.asarray(values).astype(float)
+    temp_predictions = np.asarray(values).astype(float)
+    return normalize(np.concatenate(temp_values, temp_predictions, axis = 1))
+
 def process_data(data_values, data_attributes):
     for i in range(len(data_attributes), 1, -1):
         if(type(data_attributes[-i][1]) == list):
@@ -52,20 +58,41 @@ def process_data(data_values, data_attributes):
     for row in data_values:
         predictions.append(int(row.pop(-1) == "anomaly"))
        
-    data_values = normalize(data_values)
+    
     return data_values, predictions
 
-def load_and_process_data(datapath):
+def load_and_process_data(datapath, n_components):
+    values = []
+    predictions = []
+    for i in range(0,n_components):
+        file = arff.load(open(datapath.split(".")[0] + str(i+1) + "." + datapath.split(".")[1]))
+        temp_data_values = file['data']
+        attributes = file['attributes']
+        temp_values, temp_predictions = process_data(temp_data_values, attributes)
+        values.extend(temp_values)
+        predictions.extend(temp_predictions)
+        
+    return normalize(values, predictions)
+
+def split_dataset(datapath, n_sections):
     file = arff.load(open(datapath))
     data_values = file['data']
-    attributes = file['attributes']
-    return process_data(data_values, attributes)
-
-
     
-            
+    iterator = iter(data_values)
+    split_size = int(len(data_values)/n_sections)
+    splits = [split_size for i in range(1, n_sections)]
+    splits.append(len(data_values) - split_size * (n_sections-1))
+    split_values = [list(islice(iterator, elem)) for elem in splits]    
+    
+    for i in range(0, n_sections):
+        new_file_data = {
+            'relation': 'KDDTrain',
+            'description': '',
+            'data': split_values[i],
+            'attributes': file['attributes']}
+        new_file = open(datapath.split(".")[0] + str(i+1) + "." + datapath.split(".")[1], "w+")
+        arff.dump(new_file_data, new_file)
 
 
-
-
+#split_dataset("Datasets/KDDTrain+.arff", 5)
     

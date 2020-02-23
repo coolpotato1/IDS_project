@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split, cross_validate
 
 TRAIN_DATA_PATH = "Datasets/KDDTrain+.arff"
 TEST_DATA_PATH = "Datasets/KDDTest+.arff"
-x_train, y_train = pre.load_and_process_data(TRAIN_DATA_PATH)
+x_train, y_train = pre.load_and_process_data(TRAIN_DATA_PATH, 5)
 x_test, y_test = pre.load_and_process_data(TEST_DATA_PATH)
 
 x_train = feat.pca(x_train)
