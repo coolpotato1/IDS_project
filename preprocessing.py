@@ -28,26 +28,31 @@ def one_hot_insert(data, data_attributes, column_no):
     
     return data_return.tolist()
 
-def target_insert(data, data_attributes, column_no):
-    predictions_by_value = defaultdict(list)
-    means = {}
+#Currently only works correctly on full datasets
+def target_insert(data, data_attributes, column_no, is_test_data = False):
     #Get list of predictions for each unique value. This needs to be run before splitting predictions from data.
-    for row in data:
-        predictions_by_value[row[column_no]].append(int(row[-1] == 'anomaly'))
+    if(not is_test_data):
+        predictions_by_value = defaultdict(list)
+        means = {}
+        for row in data:
+            predictions_by_value[row[column_no]].append(int(row[-1] == 'anomaly'))
+            
+        for key in predictions_by_value:
+            means[key] = np.mean(predictions_by_value[key])
+            index = data_attributes[column_no][1].index(key)
+            data_attributes[column_no][1][index] = (key, means[key])
     
-    for key in predictions_by_value:
-        means[key] = np.mean(predictions_by_value[key])
-    
     for row in data:
-        row[column_no] = means[row[column_no]]
+        mean_value = [i[1] for i in data_attributes[column_no][1] if i[0] == row[column_no]]
+        row[column_no] = mean_value[0]
     
     return data
 
-def choose_and_use_encoding(data, data_attributes, column_no):
+def choose_and_use_encoding(data, data_attributes, column_no, is_test_data):
     if(type(data_attributes[column_no][1]) != list or len(data_attributes) <= 2):
         return data
     else:
-        return target_insert(data, data_attributes, column_no)
+        return target_insert(data, data_attributes, column_no, is_test_data)
 
 def normalize(data):
     
@@ -65,9 +70,9 @@ def normalize(data):
     return_data = (return_data - min_values) / difference
     return return_data
 
-def process_data(data_values, data_attributes):
+def process_data(data_values, data_attributes, is_test_data):
     for i in range(len(data_attributes), 1, -1):
-        data = choose_and_use_encoding(data_values, data_attributes, -i)
+        data = choose_and_use_encoding(data_values, data_attributes, -i, is_test_data)
     
     #Assign the class values
     predictions = []
@@ -77,7 +82,7 @@ def process_data(data_values, data_attributes):
     
     return data_values, predictions
 
-def load_and_process_data(datapath, n_components = 1, normalize = True):
+def load_and_process_data(datapath, n_components = 1, normalize = False, is_test_data = False):
     values = []
     predictions = []
     
@@ -85,13 +90,13 @@ def load_and_process_data(datapath, n_components = 1, normalize = True):
         file = arff.load(open(datapath))
         values = file['data']
         attributes = file['attributes']
-        values, predictions = process_data(values, attributes)
+        values, predictions = process_data(values, attributes, is_test_data)
     else:
         for i in range(0,n_components):
             file = arff.load(open(datapath.split(".")[0] + str(i+1) + "." + datapath.split(".")[1]))
             temp_data_values = file['data']
             attributes = file['attributes']
-            temp_values, temp_predictions = process_data(temp_data_values, attributes)
+            temp_values, temp_predictions = process_data(temp_data_values, attributes, is_test_data)
             values.extend(temp_values)
             predictions.extend(temp_predictions)
     
