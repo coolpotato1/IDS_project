@@ -10,25 +10,47 @@ import gc
 import sys
 import numpy as np
 from itertools import islice
+from collections import defaultdict
 
-def one_hot_encode(column):
-    uniqueValues = set(column)
+def one_hot_encode(column, column_no, attributes):
     one_hot_row = []
     for value in column:
-        one_hot_row.append([int(value == unique) for unique in uniqueValues])
+        one_hot_row.append([int(value == attribute) for attribute in attributes[column_no][1]])
         
     return one_hot_row
 
 
-def one_hot_insert(data, column_no):
-    one_hot_values = one_hot_encode([row[column_no] for row in data])
+def one_hot_insert(data, data_attributes, column_no):
+    one_hot_values = one_hot_encode([row[column_no] for row in data], column_no, data_attributes)
     #If you run into memory issues, rewrite to use list methods instead of numpy
     left, delete, right = np.split(data, [column_no, column_no+1], axis = 1)
     data_return = np.concatenate((left, one_hot_values, right), axis = 1)
     
     return data_return.tolist()
 
+def target_insert(data, data_attributes, column_no):
+    predictions_by_value = defaultdict(list)
+    means = {}
+    #Get list of predictions for each unique value. This needs to be run before splitting predictions from data.
+    for row in data:
+        predictions_by_value[row[column_no]].append(int(row[-1] == 'anomaly'))
+    
+    for key in predictions_by_value:
+        means[key] = np.mean(predictions_by_value[key])
+    
+    for row in data:
+        row[column_no] = means[row[column_no]]
+    
+    return data
+
+def choose_and_use_encoding(data, data_attributes, column_no):
+    if(type(data_attributes[column_no][1]) != list or len(data_attributes) <= 2):
+        return data
+    else:
+        return target_insert(data, data_attributes, column_no)
+
 def normalize(data):
+    
     return_data = np.asarray(data).astype(float)
     max_values = np.amax(return_data, axis = 0)
     min_values = np.amin(return_data, axis = 0)
@@ -43,15 +65,9 @@ def normalize(data):
     return_data = (return_data - min_values) / difference
     return return_data
 
-def normalize(values, predictions):
-    temp_values = np.asarray(values).astype(float)
-    temp_predictions = np.asarray(values).astype(float)
-    return normalize(np.concatenate(temp_values, temp_predictions, axis = 1))
-
 def process_data(data_values, data_attributes):
     for i in range(len(data_attributes), 1, -1):
-        if(type(data_attributes[-i][1]) == list):
-            data_values = one_hot_insert(data_values, -i)
+        data = choose_and_use_encoding(data_values, data_attributes, -i)
     
     #Assign the class values
     predictions = []
@@ -61,18 +77,28 @@ def process_data(data_values, data_attributes):
     
     return data_values, predictions
 
-def load_and_process_data(datapath, n_components):
+def load_and_process_data(datapath, n_components = 1, normalize = True):
     values = []
     predictions = []
-    for i in range(0,n_components):
-        file = arff.load(open(datapath.split(".")[0] + str(i+1) + "." + datapath.split(".")[1]))
-        temp_data_values = file['data']
+    
+    if(n_components == 1):
+        file = arff.load(open(datapath))
+        values = file['data']
         attributes = file['attributes']
-        temp_values, temp_predictions = process_data(temp_data_values, attributes)
-        values.extend(temp_values)
-        predictions.extend(temp_predictions)
-        
-    return normalize(values, predictions)
+        values, predictions = process_data(values, attributes)
+    else:
+        for i in range(0,n_components):
+            file = arff.load(open(datapath.split(".")[0] + str(i+1) + "." + datapath.split(".")[1]))
+            temp_data_values = file['data']
+            attributes = file['attributes']
+            temp_values, temp_predictions = process_data(temp_data_values, attributes)
+            values.extend(temp_values)
+            predictions.extend(temp_predictions)
+    
+    if(normalize):
+        return normalize(values), predictions
+    else:
+        return values, predictions
 
 def split_dataset(datapath, n_sections):
     file = arff.load(open(datapath))

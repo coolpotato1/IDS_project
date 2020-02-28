@@ -10,4 +10,6 @@ from sklearn.decomposition import PCA
 
 def pca(data, n_components = 8):
     pca = PCA(n_components)
-    return pca.fit_transform(data)
+    pca.fit(data)
+    print(np.sum(pca.explained_variance_ratio_))
+    return pca.transform(data)
