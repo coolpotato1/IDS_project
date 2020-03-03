@@ -8,7 +8,7 @@ import preprocessing as pre
 import numpy as np
 from sklearn.decomposition import PCA
 
-def pca(data, n_components = 8):
+def pca(data, n_components = 8, is_test_data = False):
     pca = PCA(n_components)
     pca.fit(data)
     print(np.sum(pca.explained_variance_ratio_))

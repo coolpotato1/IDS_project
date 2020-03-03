@@ -33,7 +33,6 @@ def one_hot_insert(data, data_attributes, column_no):
     return data_return.tolist()
 
 def binary_insert(data, data_attributes, column_no):
-    #rewrite to dictionary
     values = {}
     for i in range(0, len(data_attributes[column_no][1])):
         values[data_attributes[column_no][1][i]] = i
@@ -84,7 +83,7 @@ def choose_and_use_encoding(data, data_attributes, column_no, is_test_data):
     elif(len(data_attributes[column_no][1]) <= 4):
         return one_hot_insert(data, data_attributes, column_no)
     else:
-        return binary_insert(data, data_attributes, column_no)
+        return target_insert(data, data_attributes, column_no, is_test_data)
 
 def remove_useless_columns(data):
     return_data = np.asarray(data).astype(np.float32)
@@ -97,16 +96,17 @@ def remove_useless_columns(data):
     return_data = np.delete(return_data, useless, axis = 1)
     return return_data
 
-#def normalize(data):
-    
-    
+def normalize(data):
     
     #Remove columns where values are constant, done on min and diff arrays too, so dimensions fit for normalization.
+    return_data = np.asarray(data).astype(np.float32)
+    max_values = np.amax(return_data, axis = 0)
+    min_values = np.amin(return_data, axis = 0)
+    difference = max_values - min_values
     
-    #min_values = np.delete(min_values, useless)
-    #difference = np.delete(difference, useless)
-    
-    #return_data = (return_data - min_values) / difference
+    return_data = (return_data - min_values) / difference
+    return_data = np.nan_to_num(return_data)
+    return return_data
     
 
 def process_data(data_values, data_attributes, is_test_data):
@@ -118,10 +118,10 @@ def process_data(data_values, data_attributes, is_test_data):
     for row in data_values:
         predictions.append(int(row.pop(-1) == "anomaly"))
        
-    data_values = remove_useless_columns(data_values)
+    #data_values = remove_useless_columns(data_values)
     return data_values, predictions
 
-def load_and_process_data(datapath, n_components = 1, normalize = False, is_test_data = False, attributes = None):
+def load_and_process_data(datapath, n_components = 1, do_normalize = False, is_test_data = False, attributes = None):
     values = []
     predictions = []
     if(n_components == 1):
@@ -140,7 +140,7 @@ def load_and_process_data(datapath, n_components = 1, normalize = False, is_test
             values.extend(temp_values)
             predictions.extend(temp_predictions)
     
-    if(normalize):
+    if(do_normalize):
         return normalize(values), predictions, attributes
     else:
         return values, predictions, attributes
