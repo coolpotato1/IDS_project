@@ -50,6 +50,13 @@ def binary_insert(data, data_attributes, column_no):
     
     return data_return.tolist()
 
+def categorical_insert(data, data_attributes, column_no):
+    for row in data:
+        row[column_no] = [i for i in range(0, len(data_attributes[column_no][1])) 
+                                    if row[column_no] == data_attributes[column_no][1][i]][0]
+    
+    return data
+
 #Currently only works correctly on full datasets
 def target_insert(data, data_attributes, column_no, is_test_data = False):
     #Get list of predictions for each unique value. This needs to be run before splitting predictions from data.
@@ -83,7 +90,7 @@ def choose_and_use_encoding(data, data_attributes, column_no, is_test_data):
     elif(len(data_attributes[column_no][1]) <= 4):
         return one_hot_insert(data, data_attributes, column_no)
     else:
-        return target_insert(data, data_attributes, column_no, is_test_data)
+        return binary_insert(data, data_attributes, column_no)
 
 def remove_useless_columns(data):
     return_data = np.asarray(data).astype(np.float32)

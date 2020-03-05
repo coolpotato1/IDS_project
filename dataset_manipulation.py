@@ -57,3 +57,6 @@ def get_attack_types(train_path, test_path):
     
 create_filtered_dataset("Datasets/KDDTest+", attacks.R2L.value + attacks.U2R.value)
 create_filtered_dataset("Datasets/KDDTrain+", attacks.R2L.value + attacks.U2R.value)
+#train_attacks, test_attacks = get_attack_types("Datasets/KDDTrain+.txt", "Datasets/KDDTest+.txt")
+#print(train_attacks)
+#print(test_attacks)
