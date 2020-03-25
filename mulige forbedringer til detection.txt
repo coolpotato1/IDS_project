@@ -4,3 +4,5 @@ Evt brug en form for wrapper feature selection
 
 Evt sorter forskellige angreb fra datasættet
 
+Brug embeddings i stedet for one hot!
+

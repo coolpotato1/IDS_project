@@ -44,6 +44,10 @@ def csv_read(datapath):
     with open(datapath) as file:
         data = csv.reader(file)
         return [row for row in data]
+    
+def get_attack_column(dataset_type):
+    data = csv_read("Datasets/KDD" + dataset_type + "+.txt")
+    return [row[-2] for row in data]
 
 
 def get_attack_types(train_path, test_path):
@@ -54,6 +58,32 @@ def get_attack_types(train_path, test_path):
     train_set = set([row[-2] for row in train_data])
     
     return train_set, test_set
+   
+    
+def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_separated = False):
+    csv_data = csv_read(datapath)
+    attack_indices = []
+    return_scores = []
+    for attack in attack_types:
+        if(keep_separated):
+            attack_indices.append([i for i in range(0, len(csv_data)) if csv_data[i][-2] in attack])
+        else:
+            attack_indices.extend([i for i in range(0, len(csv_data)) if csv_data[i][-2] in attack])
+            
+    #Check if we have a 1-dimensional or 2 dimensional list
+    if(type(attack_indices[0]) == list):
+        for index_list in attack_indices:
+            return_scores.append(clf.score([data[i] for i in range(0, len(data)) if i in index_list], 
+                                            [actual_class[i] for i in range(0, len(actual_class)) if i in index_list]))
+            
+    else:
+        return_scores.append(clf.score([data[i] for i in range(0, len(data)) if i in attack_indices], 
+                                            [actual_class[i] for i in range(0, len(actual_class)) if i in attack_indices]))
+        
+    return return_scores
+    
+          
+    
     
 create_filtered_dataset("Datasets/KDDTest+", attacks.R2L.value + attacks.U2R.value)
 create_filtered_dataset("Datasets/KDDTrain+", attacks.R2L.value + attacks.U2R.value)

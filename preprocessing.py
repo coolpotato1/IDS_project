@@ -10,9 +10,11 @@ import gc
 import sys
 import numpy as np
 import math
+import gensim
 from category_encoders.binary import BinaryEncoder
 from itertools import islice
 from collections import defaultdict
+from dataset_manipulation import get_attack_column
 
 #Define constants here
 N_OBSERVATIONS_REQUIRED = 100
@@ -84,13 +86,39 @@ def target_insert(data, data_attributes, column_no, is_test_data = False):
     
     return data
 
+#use gensim.models.Word2Vec()
+#Maybe look at this more later
+def embedded_insert(data, data_attributes, column_no, is_test_data = False):
+    embedded_values = []
+    if(not is_test_data):
+        attacks = get_attack_column("Train")
+        embed_data = [data[i][column_no - 2: column_no + 2] + [attacks[i]] for i in range(0, len(data))]
+        model = gensim.models.Word2Vec(embed_data, min_count = 1, size = 5, window = 5, iter = 10)
+        embedded_values = [model[row[column_no]] for row in data]
+        
+        for i in range (0, len(data_attributes[column_no][1])):
+            data_attributes[column_no][1][i] = (data_attributes[column_no][1][i], model[data_attributes[column_no][1][i]])
+    
+    else:
+        for row in data:
+            embedded_values.append([i[1] for i in data_attributes[column_no][1] if i[0] == row[column_no]][0])
+    
+        
+    
+    left, delete, right = np.split(data, [column_no, column_no+1], axis = 1)
+    data_return = np.concatenate((left, embedded_values, right), axis = 1)
+    
+    return data_return
+
 def choose_and_use_encoding(data, data_attributes, column_no, is_test_data):
     if(type(data_attributes[column_no][1]) != list or len(data_attributes[column_no][1]) <= 2):
         return data
     elif(len(data_attributes[column_no][1]) <= 4):
         return one_hot_insert(data, data_attributes, column_no)
-    else:
+    elif(len(data_attributes[column_no][1]) <= 15):
         return binary_insert(data, data_attributes, column_no)
+    else:
+        return embedded_insert(data, data_attributes, column_no, is_test_data)
 
 def remove_useless_columns(data):
     return_data = np.asarray(data).astype(np.float32)

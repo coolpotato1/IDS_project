@@ -7,6 +7,10 @@ Created on Fri Feb 21 12:20:52 2020
 import feature_selection as feat
 import numpy as np
 import preprocessing as pre
+import dataset_manipulation as man
+from keras.models import Sequential
+from keras.layers import Dense
+from NSL_KDD_attack_types import attack_types as attacks
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.svm import SVC
@@ -14,8 +18,19 @@ from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE 
 import time
 N_COMPONENTS = 15
-TRAIN_DATA_PATH = "Datasets/KDDTrain+_filtered.arff"
-TEST_DATA_PATH = "Datasets/KDDTest+_filtered.arff"
+TRAIN_DATA_PATH = "Datasets/KDDTrain+.arff"
+TEST_DATA_PATH = "Datasets/KDDTest+.arff"
+CSV_DATA_PATH = "Datasets/KDDTest+.txt"
+
+def NN_train(data, predictions):
+    model = Sequential()
+    model.add(Dense(30, input_dim = len(data[0]), activation="relu"))
+    model.add(Dense(8, activation="relu"))
+    model.add(Dense(1, activation="sigmoid"))
+    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+    model.fit(data, predictions, batch_size = 100, epochs = 50)
+    return model
+
 x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize = True)
 
 start_load = time.time()
@@ -27,18 +42,17 @@ x_train = np.asarray(x_train).astype(np.float32)
 
 
 print("Getting to PCA")
-pca = PCA(N_COMPONENTS)
-pca.fit(x_train)
-print("The variance explained is: ", str(np.sum(pca.explained_variance_ratio_)))
+#pca = PCA(N_COMPONENTS)
+#pca.fit(x_train)
+#print("The variance explained is: ", str(np.sum(pca.explained_variance_ratio_)))
 #
-x_train = pca.transform(x_train)
-x_test = pca.transform(x_test)
+#x_train = pca.transform(x_train)
+#x_test = pca.transform(x_test)
 
 
-clf = RandomForestClassifier(n_estimators = 150)
+#clf = RandomForestClassifier(n_estimators = 150)
 #clf = SVC()
 #results = cross_validate(clf, x_train, y_train, cv=10)
-#x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size = 0.2)
 
 #print("Doing RFE")
 #rfe = RFE(clf, 16, 2)
@@ -46,7 +60,17 @@ clf = RandomForestClassifier(n_estimators = 150)
 #x_test = rfe.transform(x_test)
 #print("Finished RFE")
 print("Fitting classifier")
-clf.fit(x_train, y_train)
-results = clf.score(x_test, y_test)
+#clf.fit(x_train, y_train)
 
-print(results)
+pre_train = time.time()
+clf = NN_train(x_train, y_train)
+post_train = time.time()
+
+#For the NN model, first value is loss
+loss, score = clf.evaluate(x_test, y_test)
+
+#results = clf.score(x_test, y_test)
+print("Accuracy is: ", score)
+print("Time for training in seconds is:", post_train - pre_train)
+#print("normal results are:", results)
+#print("specific results are:", man.get_specific_scores(CSV_DATA_PATH, clf, x_test, y_test, [attacks.NORMAL.value, attacks.NEPTUNE.value], True))
