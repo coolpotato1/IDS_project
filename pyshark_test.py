@@ -54,7 +54,9 @@ def get_flows(raw_data):
             protocol = get_protocol(packet)
             if packet.ipv6.nxt == "43" and packet.ipv6.routing_segleft != "0":
                 continue
-            flow_identifier = temp_flow_identifier[0] + temp_flow_identifier[1] + protocol
+            #splits the flows into time intervals of 60 seconds
+            time_interval = str(float(packet.sniff_timestamp) - (float(packet.sniff_timestamp) % 60))
+            flow_identifier = time_interval + temp_flow_identifier[0] + temp_flow_identifier[1] + protocol
             flow_dict[flow_identifier].protocol = protocol
             flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
             flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
