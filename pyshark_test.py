@@ -10,15 +10,16 @@ from _collections import defaultdict
 
 # import asyncio
 # import nest_asyncio
-
+ATTACKER_ID = "209:9:9:9"
+ATTACK_DELAY = 480 - 1  # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
 data = pyshark.FileCapture("pcaps/radiolog-1585743076838.pcap")
 
-
+#Probably gonna add dio, dao and dis packets later
 class flow:
     src_bytes = 0
     dst_bytes = 0
     protocol = ""
-
+    abnormal = 0
 
 # Husk at ændre 0 og 43
 transport_protocols = {
@@ -31,8 +32,8 @@ transport_protocols = {
 }
 
 
-# Packets between the 2 same hosts should be the same, even if they switch up
-# which host is src and which is dest. For this reason we sort the hosts.
+# Packets between the 2 same hosts should be in the same flow, even if they switch up
+# which host is src and which is dest. For this reason we sort the hosts (as we use their combined addresses as a key for their flow).
 def sort_addresses(src_ip, dest_ip):
     sorted_list = sorted([src_ip, dest_ip], reverse=True)
     # Check if the ordering has been changed, needed later to determine src and dest bytes
@@ -48,20 +49,43 @@ def get_protocol(packet):
 
 def get_flows(raw_data):
     flow_dict = defaultdict(flow)
+    is_first = True
     for packet in raw_data:
+        if is_first:
+            start_time = float(packet.sniff_timestamp)
+            is_first = False
+
         if "ipv6" in packet:
             is_reversed, temp_flow_identifier = sort_addresses(packet.ipv6.src, packet.ipv6.dst)
             protocol = get_protocol(packet)
             if packet.ipv6.nxt == "43" and packet.ipv6.routing_segleft != "0":
                 continue
-            #splits the flows into time intervals of 60 seconds
-            time_interval = str(float(packet.sniff_timestamp) - (float(packet.sniff_timestamp) % 60))
-            flow_identifier = time_interval + temp_flow_identifier[0] + temp_flow_identifier[1] + protocol
+
+            # splits the flows into time intervals of 30 seconds
+            time_since_start = float(packet.sniff_timestamp) - start_time
+            time_interval = str(time_since_start - time_since_start % 30)
+            flow_identifier = time_interval + ";" + temp_flow_identifier[0] + ";" + temp_flow_identifier[1] + ";" + protocol
+
             flow_dict[flow_identifier].protocol = protocol
             flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
             flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
 
     return flow_dict
+
+
+def is_attack(flow_key):
+    time_stamp = float(re.search("^[^;]+", flow_key).group(0))
+    if time_stamp >= ATTACK_DELAY:
+        if ATTACKER_ID in flow_key and "udp" in flow_key:
+            return True
+
+    return False
+
+
+def label_flows(flow_dict):
+    for key in flow_dict:
+        if is_attack(key):
+            flow_dict[key].abnormal = 1
 
 
 def get_packet_loss(packet_dict):
@@ -87,4 +111,5 @@ def get_packet_loss(packet_dict):
 
 
 flows = get_flows(data)
+label_flows(flows)
 print("Just need something here so I can set a breaking point")
