@@ -59,7 +59,51 @@ def get_attack_types(train_path, test_path):
     
     return train_set, test_set
    
-    
+#This method definitely needs to be refactored, holy fuck its ugly. This has probably added +5 hours to technical debt.
+def combine_datasets(dataset1, dataset2):
+    file1 = arff.load(open("Datasets/" + dataset1 + ".arff"))
+    file2 = arff.load(open("Datasets/" + dataset2 + ".arff"))
+    unique_columns = [i for i in range(len(file1["attributes"])) if file1["attributes"][i][0] not in [attribute[0]
+                            for attribute in file2["attributes"]]]
+
+    #needed in case any of the non-unique columns have values that do not exist in the other dataset
+    non_unique_columns = [i for i in range(len(file1["attributes"])) if i not in unique_columns]
+    for column in non_unique_columns:
+        index = [i for i in range(len(file2["attributes"])) if file2["attributes"][i][0] == file1["attributes"][column][0]][0]
+        #This should only happen if the compared attributes contain lists
+        if file1["attributes"][column][1] != file2["attributes"][index][1]:
+            file2["attributes"][index][1].extend(list(set(file1["attributes"][column][1]) - set(file2["attributes"][index][1])))
+
+    #Also add the unique attributes
+    file2["attributes"].extend([file1["attributes"][column_no] for column_no in unique_columns])
+
+    #Match dimensions of second dataset, by padding with zeroes
+    for row in file2["data"]:
+        row.extend([0] * len(unique_columns))
+
+    #Match dimensions for the first dataset and ensure that common attributes are placed in correct columns
+    new_data1 = []
+    new_column_indexes = []
+    for i in range(len(non_unique_columns)):
+        new_column_indexes.extend([j for j in range(len(file2["attributes"])) if file2["attributes"][j][0] == file1["attributes"][non_unique_columns[i]][0]])
+
+    for i in range(len(file1["data"])):
+        #Create zeroes for all of file2's attributes, and then add file 1's. Its so dimensions match
+        new_data1.append([0] * (len(file2["attributes"]) - len(unique_columns)) + [file1["data"][i][j] for j in unique_columns])
+        for j in range(len(new_column_indexes)):
+            new_data1[i][new_column_indexes[j]] = file1["data"][i][non_unique_columns[j]]
+
+    file2["data"].extend(new_data1)
+
+    return_arff = {
+        'relation': 'CombinedData',
+        'description': '',
+        'data': file2["data"],
+        'attributes': file2["attributes"]
+    }
+    arff.dump(return_arff, open("Datasets/combinedDataset.arff", "w+"))
+
+
 def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_separated = False):
     csv_data = csv_read(datapath)
     attack_indices = []
@@ -82,11 +126,5 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
         
     return return_scores
     
-          
-    
-    
-create_filtered_dataset("Datasets/KDDTest+", attacks.R2L.value + attacks.U2R.value)
-create_filtered_dataset("Datasets/KDDTrain+", attacks.R2L.value + attacks.U2R.value)
-#train_attacks, test_attacks = get_attack_types("Datasets/KDDTrain+.txt", "Datasets/KDDTest+.txt")
-#print(train_attacks)
-#print(test_attacks)
+
+combine_datasets("coojaData1", "KDDTrain+")

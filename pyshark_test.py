@@ -29,7 +29,7 @@ class flow:
     # This should probably be refactored at some point
     @staticmethod
     def get_flow_attributes():
-        return [("src_bytes", "REAL"), ("dst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmp"]),
+        return [("src_bytes", "REAL"), ("dst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmpv6"]),
                 ("class", ["normal", "anomaly"])]
 
 
