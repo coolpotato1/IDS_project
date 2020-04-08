@@ -95,6 +95,18 @@ def combine_datasets(dataset1, dataset2):
 
     file2["data"].extend(new_data1)
 
+    #Find class label and return it to the last column (its rightful place)
+
+    index = [i for i in range(len(file2["attributes"])) if file2["attributes"][i][0] == "class"][0]
+
+    temp_attribute = file2["attributes"][index]
+    file2["attributes"][index] = file2["attributes"][-1]
+    file2["attributes"][-1] = temp_attribute
+    for row in file2["data"]:
+        temp_data = row[index]
+        row[index] = row[-1]
+        row[-1] = temp_data
+
     return_arff = {
         'relation': 'CombinedData',
         'description': '',
