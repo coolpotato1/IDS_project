@@ -4,6 +4,7 @@ Created on Fri Apr  3 10:44:02 2020
 
 @author: Henning
 """
+import arff
 import pyshark
 import re
 from _collections import defaultdict
@@ -14,12 +15,23 @@ ATTACKER_ID = "209:9:9:9"
 ATTACK_DELAY = 480 - 1  # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
 data = pyshark.FileCapture("pcaps/radiolog-1585743076838.pcap")
 
-#Probably gonna add dio, dao and dis packets later
+
+# Probably gonna add dio, dao and dis packets later
 class flow:
     src_bytes = 0
     dst_bytes = 0
-    protocol = ""
-    abnormal = 0
+    protocol_type = ""
+    flow_class = "normal"
+
+    def get_flow_as_list(self):
+        return [self.src_bytes, self.dst_bytes, self.protocol, self.flow_class]
+
+    # This should probably be refactored at some point
+    @staticmethod
+    def get_flow_attributes():
+        return [("src_bytes", "REAL"), ("dst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmp"]),
+                ("class", ["normal", "anomaly"])]
+
 
 # Husk at ændre 0 og 43
 transport_protocols = {
@@ -85,7 +97,7 @@ def is_attack(flow_key):
 def label_flows(flow_dict):
     for key in flow_dict:
         if is_attack(key):
-            flow_dict[key].abnormal = 1
+            flow_dict[key].flow_class = "anomaly"
 
 
 def get_packet_loss(packet_dict):
@@ -110,6 +122,22 @@ def get_packet_loss(packet_dict):
     return ((sent_packets - received_packets) / sent_packets) * 100
 
 
+def export_as_arff(flow_dict):
+    attributes = flow.get_flow_attributes()
+    data = [flow_dict[key].get_flow_as_list() for key in flow_dict]
+
+    export_arff = {
+        'relation': 'CoojaData',
+        'description': 'The simulated data from the IoT environment',
+        'data': data,
+        'attributes': attributes
+    }
+
+    arff.dump(export_arff, open("Datasets/coojaData1.arff", "w+"))
+    print("exported datasets")
+
+
 flows = get_flows(data)
 label_flows(flows)
+export_as_arff(flows)
 print("Just need something here so I can set a breaking point")
