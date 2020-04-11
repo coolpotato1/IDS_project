@@ -18,8 +18,8 @@ from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE 
 import time
 N_COMPONENTS = 15
-TRAIN_DATA_PATH = "Datasets/KDDTrain+.arff"
-TEST_DATA_PATH = "Datasets/KDDTest+.arff"
+TRAIN_DATA_PATH = "Datasets/combinedCoojas.arff"
+TEST_DATA_PATH = "Datasets/coojaData4.arff"
 CSV_DATA_PATH = "Datasets/KDDTest+.txt"
 
 def NN_train(data, predictions):
@@ -67,10 +67,11 @@ clf = NN_train(x_train, y_train)
 post_train = time.time()
 
 #For the NN model, first value is loss
-loss, score = clf.evaluate(x_test, y_test)
+normal_score, anomaly_score = man.get_normal_and_anomaly_scores(clf, x_test, y_test)
 
 #results = clf.score(x_test, y_test)
-print("Accuracy is: ", score)
+print("Normal accuracy is: ", normal_score)
+print("Anomaly accuracy is: ", anomaly_score)
 print("Time for training in seconds is:", post_train - pre_train)
 #print("normal results are:", results)
 #print("specific results are:", man.get_specific_scores(CSV_DATA_PATH, clf, x_test, y_test, [attacks.NORMAL.value, attacks.NEPTUNE.value], True))

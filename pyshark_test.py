@@ -12,8 +12,9 @@ from _collections import defaultdict
 # import asyncio
 # import nest_asyncio
 ATTACKER_ID = "209:9:9:9"
+BORDER_ID = "201:1:1:1"
 ATTACK_DELAY = 480 - 1  # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
-data = pyshark.FileCapture("pcaps/radiolog-1585743076838.pcap")
+data = pyshark.FileCapture("pcaps/radiolog-1586452318879.pcap")
 
 
 # Probably gonna add dio, dao and dis packets later
@@ -76,7 +77,8 @@ def get_flows(raw_data):
             # splits the flows into time intervals of 30 seconds
             time_since_start = float(packet.sniff_timestamp) - start_time
             time_interval = str(time_since_start - time_since_start % 30)
-            flow_identifier = time_interval + ";" + temp_flow_identifier[0] + ";" + temp_flow_identifier[1] + ";" + protocol
+            flow_identifier = time_interval + ";" + temp_flow_identifier[0] + ";" + temp_flow_identifier[
+                1] + ";" + protocol
 
             flow_dict[flow_identifier].protocol = protocol
             flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
@@ -100,6 +102,17 @@ def label_flows(flow_dict):
             flow_dict[key].flow_class = "anomaly"
 
 
+#This function returns a dictionary with the actual data carried in the packets, without any headers
+def get_data_dict(raw_data):
+    data_dict = defaultdict(list)
+
+    for packet in raw_data:
+        if "udp" in packet:
+            data = bytearray.fromhex(packet.data.data).decode()
+            data_dict[packet.ipv6.src].append(data)
+
+    return data_dict
+
 def get_packet_loss(packet_dict):
     received_packets = 0
     sent_packets = 0
@@ -114,15 +127,23 @@ def get_packet_loss(packet_dict):
 
         match = re.search(pattern, packet_dict[key][i])
 
-        if key == "01":
+        if BORDER_ID in key:
             received_packets = int(match.group(1))
         else:
             sent_packets += int(match.group(1))
 
     return ((sent_packets - received_packets) / sent_packets) * 100
 
+# def get_packet_loss(raw_data):
+#     received_packets = 0
+#     sent_packets = 0
+#     for packet in raw_data:
+#         if "ipv6" in packet:
+#             if packet.ipv6.nxt == "43" and packet.ipv6.routing_segleft != "0":
+#                 print(packet.sniff_timestamp)
 
-def export_as_arff(flow_dict):
+
+def export_as_arff(flow_dict, file):
     attributes = flow.get_flow_attributes()
     data = [flow_dict[key].get_flow_as_list() for key in flow_dict]
 
@@ -133,11 +154,10 @@ def export_as_arff(flow_dict):
         'attributes': attributes
     }
 
-    arff.dump(export_arff, open("Datasets/coojaData1.arff", "w+"))
+    arff.dump(export_arff, open("Datasets/" + file + ".arff", "w+"))
     print("exported datasets")
-
 
 flows = get_flows(data)
 label_flows(flows)
-export_as_arff(flows)
+export_as_arff(flows, "coojaData4")
 print("Just need something here so I can set a breaking point")

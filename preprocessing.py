@@ -11,7 +11,6 @@ import sys
 import numpy as np
 import math
 import gensim
-from category_encoders.binary import BinaryEncoder
 from itertools import islice
 from collections import defaultdict
 from dataset_manipulation import get_attack_column
