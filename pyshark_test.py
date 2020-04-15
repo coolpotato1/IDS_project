@@ -11,27 +11,31 @@ from _collections import defaultdict
 
 # import asyncio
 # import nest_asyncio
-ATTACKER_ID = "209:9:9:9"
-BORDER_ID = "201:1:1:1"
-ATTACK_DELAY = 480 - 1  # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
-data = pyshark.FileCapture("pcaps/radiolog-1586452318879.pcap")
+own_simulation = False
+ATTACK_PROTOCOL = "udp" if own_simulation else "icmpv6"
+ATTACKER_ID = "209:9:9:9" if own_simulation else "1a:1a:1a1a"
+BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
+ATTACK_DELAY = 480 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
+data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1586874517525.pcap")
 
 
-# Probably gonna add dio, dao and dis packets later
 class flow:
     src_bytes = 0
     dst_bytes = 0
     protocol_type = ""
     flow_class = "normal"
+    dio_count = 0
+    dao_count = 0
+    dis_count = 0
 
     def get_flow_as_list(self):
-        return [self.src_bytes, self.dst_bytes, self.protocol, self.flow_class]
+        return [self.src_bytes, self.dst_bytes, self.protocol, self.dio_count, self.dao_count, self.dis_count, self.flow_class]
 
     # This should probably be refactored at some point
     @staticmethod
     def get_flow_attributes():
         return [("src_bytes", "REAL"), ("dst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmpv6"]),
-                ("class", ["normal", "anomaly"])]
+                ("dio_count", "REAL"), ("dao_count", "REAL"), ("dis_count", "REAL"), ("class", ["normal", "anomaly"])]
 
 
 # Husk at ændre 0 og 43
@@ -59,6 +63,18 @@ def get_protocol(packet):
         if transport_protocols[key] in packet:
             return transport_protocols[key]
 
+def add_rpl_info(flow, packet):
+    if "icmpv6" not in packet:
+        return
+
+    if packet.icmpv6.code == "0":
+        flow.dis_count += 1
+    elif packet.icmpv6.code == "1":
+        flow.dio_count += 1
+    elif packet.icmpv6.code == "2":
+        flow.dao_count +=1
+    else:
+        print("unexpected icmpv6 code")
 
 def get_flows(raw_data):
     flow_dict = defaultdict(flow)
@@ -83,6 +99,7 @@ def get_flows(raw_data):
             flow_dict[flow_identifier].protocol = protocol
             flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
             flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+            add_rpl_info(flow_dict[flow_identifier], packet)
 
     return flow_dict
 
@@ -90,7 +107,7 @@ def get_flows(raw_data):
 def is_attack(flow_key):
     time_stamp = float(re.search("^[^;]+", flow_key).group(0))
     if time_stamp >= ATTACK_DELAY:
-        if ATTACKER_ID in flow_key and "udp" in flow_key:
+        if ATTACKER_ID in flow_key and ATTACK_PROTOCOL in flow_key:
             return True
 
     return False
@@ -159,5 +176,5 @@ def export_as_arff(flow_dict, file):
 
 flows = get_flows(data)
 label_flows(flows)
-export_as_arff(flows, "coojaData4")
+export_as_arff(flows, "svelteSinkhole3")
 print("Just need something here so I can set a breaking point")

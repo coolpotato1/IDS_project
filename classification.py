@@ -18,8 +18,8 @@ from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE 
 import time
 N_COMPONENTS = 15
-TRAIN_DATA_PATH = "Datasets/combinedCoojas.arff"
-TEST_DATA_PATH = "Datasets/coojaData4.arff"
+TRAIN_DATA_PATH = "Datasets/svelteSinkhole12.arff"
+TEST_DATA_PATH = "Datasets/svelteSinkhole3.arff"
 CSV_DATA_PATH = "Datasets/KDDTest+.txt"
 
 def NN_train(data, predictions):

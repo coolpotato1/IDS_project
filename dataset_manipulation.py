@@ -189,4 +189,4 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
     return return_scores
 
 
-combine_datasets("coojaData3", "combinedCoojas", "combinedCoojas")
+combine_datasets("svelteSinkhole1", "svelteSinkhole2", "svelteSinkhole12")
