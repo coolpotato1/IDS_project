@@ -18,6 +18,7 @@ ATTACK_PROTOCOL = "udp" if own_simulation else "udp"
 ATTACKER_IDS = "209:9:9:9" if own_simulation else ["0c", "0b", "09", "12", "18", "15", "13", "19", "17", "0f", "10", "11"]
 BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
 ATTACK_DELAY = 480 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
+ATTACK_TYPE = "sinkhole"
 data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1587046554377.pcap")
 
 
@@ -193,6 +194,16 @@ def get_packet_loss(packet_dict):
 #                 print(packet.sniff_timestamp)
 
 
+def export_attacks(flow_dict, file):
+    attack_list = [ATTACK_TYPE if flow_dict[key].flow_class == "anomaly" else "normal" for key in flow_dict]
+
+    f = open(file, "w+")
+    for attack in attack_list:
+        f.write(attack + "\n")
+
+    f.close()
+    print("exported attacks")
+
 def export_as_arff(flow_dict, file):
     attributes = flow.get_flow_attributes()
     data = [flow_dict[key].get_flow_as_list() for key in flow_dict]
@@ -206,6 +217,8 @@ def export_as_arff(flow_dict, file):
 
     arff.dump(export_arff, open("Datasets/" + file + ".arff", "w+"))
     print("exported datasets")
+
+    export_attacks(flow_dict, "Datasets/" + file + "_attacks")
 
 flows = get_flows(data)
 label_flows(flows)

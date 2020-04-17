@@ -95,7 +95,7 @@ def target_insert(data, data_attributes, column_no, is_test_data=False):
 def embedded_insert(data, data_attributes, column_no, is_test_data=False):
     embedded_values = []
     if (not is_test_data):
-        attacks = get_attack_column("Train")
+        attacks = get_attack_column("KDDTrain+")
         embed_data = [data[i][column_no - 2: column_no + 2] + [attacks[i]] for i in range(0, len(data))]
         model = gensim.models.Word2Vec(embed_data, min_count=1, size=5, window=5, iter=10)
         embedded_values = [model[row[column_no]] for row in data]
@@ -119,10 +119,8 @@ def choose_and_use_encoding(data, data_attributes, column_no, is_test_data):
         return data
     elif len(data_attributes[column_no][1]) <= 4:
         return one_hot_insert(data, data_attributes, column_no)
-    elif len(data_attributes[column_no][1]) <= 15:
-        return binary_insert(data, data_attributes, column_no)
     else:
-        return embedded_insert(data, data_attributes, column_no, is_test_data)
+        return binary_insert(data, data_attributes, column_no)
 
 
 def remove_useless_columns(data):

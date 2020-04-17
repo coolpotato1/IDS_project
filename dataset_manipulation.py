@@ -47,11 +47,23 @@ def csv_read(datapath):
         data = csv.reader(file)
         return [row for row in data]
 
-
-def get_attack_column(dataset_type):
-    data = csv_read("Datasets/KDD" + dataset_type + "+.txt")
+#Deprecated (somewhat)
+def get_attack_column(dataset):
+    data = csv_read("Datasets/" + dataset + ".txt")
     return [row[-2] for row in data]
 
+def read_attacks_from_file(dataset):
+    file = open("Datasets/" + dataset + "_attacks", "r")
+    attacks = file.readlines()
+    return attacks
+
+def write_attack_column(dataset):
+    attacks = get_attack_column(dataset)
+    file = open("Datasets/" + dataset + "_attacks", "w+")
+    for attack in attacks:
+        file.write(attack + "\n")
+
+    file.close()
 
 def get_attack_types(train_path, test_path):
     test_data = csv_read(test_path)
@@ -77,14 +89,27 @@ def match_attribute_datatypes(data, attributes):
                 row[i] = "None"
 
 
+def combine_and_write_attacks(dataset1, dataset2, attacks_out_file):
+    attacks1 = read_attacks_from_file(dataset1)
+    attacks2 = read_attacks_from_file(dataset2)
+    attacks = attacks1 + attacks2
+    file = open("Datasets/" + attacks_out_file + "_attacks", "w+")
+    for attack in attacks:
+        file.write(attack)
+
+    file.close()
+
+
 # This method definitely needs to be refactored, holy fuck its ugly. This has probably added +5 hours to technical debt.
 def combine_datasets(dataset1, dataset2, combinedDataset):
     file1 = arff.load(open("Datasets/" + dataset1 + ".arff"))
     file2 = arff.load(open("Datasets/" + dataset2 + ".arff"))
+
+    #create the combined attackfile, it is on purpose that the datasets are inverted
+    combine_and_write_attacks(dataset2, dataset1, combinedDataset)
+
     unique_columns = [i for i in range(len(file1["attributes"])) if file1["attributes"][i][0] not in [attribute[0]
-                                                                                                      for attribute in
-                                                                                                      file2[
-                                                                                                          "attributes"]]]
+                                                                            for attribute in file2["attributes"]]]
 
     # needed in case any of the non-unique columns have values that do not exist in the other dataset
     non_unique_columns = [i for i in range(len(file1["attributes"])) if i not in unique_columns]
@@ -190,4 +215,5 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
     return return_scores
 
 print("scripts run apparently")
-#combine_datasets("svelteSinkhole1", "svelteSinkhole2", "svelteSinkhole12")
+#write_attack_column("KDDTrain+_20Percent")
+#combine_datasets("svelteSinkhole3", "KDDTrain+", "combinedDataset")
