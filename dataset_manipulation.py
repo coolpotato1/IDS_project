@@ -150,7 +150,8 @@ def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, is_nn=T
 
     anomalous_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 1]
     normal_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 0]
-
+    print("Amount of anomalous cases is: ", len(anomalous_indexes))
+    print("amount of normal instances: ", len(normal_indexes))
     if (is_nn):
         useless, normal_predictions = model.evaluate(np.asarray([test_data[i] for i in normal_indexes]),
                                                      [actual_classes[i] for i in normal_indexes])
@@ -188,5 +189,5 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
 
     return return_scores
 
-
-combine_datasets("svelteSinkhole1", "svelteSinkhole2", "svelteSinkhole12")
+print("scripts run apparently")
+#combine_datasets("svelteSinkhole1", "svelteSinkhole2", "svelteSinkhole12")

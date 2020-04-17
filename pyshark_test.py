@@ -12,11 +12,13 @@ from _collections import defaultdict
 # import asyncio
 # import nest_asyncio
 own_simulation = False
-ATTACK_PROTOCOL = "udp" if own_simulation else "icmpv6"
-ATTACKER_ID = "209:9:9:9" if own_simulation else "1a:1a:1a1a"
+ATTACK_PROTOCOL = "udp" if own_simulation else "udp"
+#ATTACKER_IDS = "209:9:9:9" if own_simulation else ["19", "12", "17", "0c", "11", "0b", "15", "16", "10", "0d"]
+#ATTACKER_IDS = "209:9:9:9" if own_simulation else ["19", "18", "13"]
+ATTACKER_IDS = "209:9:9:9" if own_simulation else ["0c", "0b", "09", "12", "18", "15", "13", "19", "17", "0f", "10", "11"]
 BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
 ATTACK_DELAY = 480 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
-data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1586874517525.pcap")
+data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1587046554377.pcap")
 
 
 class flow:
@@ -57,6 +59,10 @@ def sort_addresses(src_ip, dest_ip):
     is_reversed = sorted_list[0] == dest_ip
     return is_reversed, sorted_list
 
+#this is needed because the ips in old cooja are stupid
+def get_svelte_ips(hex_ids):
+    return ["::212:74" + id + ":" + id.lstrip("0") + ":" + id.lstrip("0") + id for id in hex_ids]
+
 
 def get_protocol(packet):
     for key in transport_protocols:
@@ -76,6 +82,17 @@ def add_rpl_info(flow, packet):
     else:
         print("unexpected icmpv6 code")
 
+
+def is_packet_at_final_destination(packet):
+    #The wpan address property name depends on the adress mode, so we need to check for that.
+    if packet.wpan.dst_addr_mode[-1] == "3":
+        #This is kinda a hacky solution, but it is necessary because the ip of border router is ::1, so cannot just match on the last 2 characters as with the other ip's
+        return packet.wpan.dst64[-1] == packet.ipv6.dst[-1] and (packet.wpan.dst64[-2] == packet.ipv6.dst[-2] or
+               (packet.wpan.dst64[-2] == "0" and packet.ipv6.dst[-2] == ":"))
+
+    return False
+
+
 def get_flows(raw_data):
     flow_dict = defaultdict(flow)
     is_first = True
@@ -84,7 +101,8 @@ def get_flows(raw_data):
             start_time = float(packet.sniff_timestamp)
             is_first = False
 
-        if "ipv6" in packet:
+        #For the time being we dont want broadcast flows
+        if "ipv6" in packet and "ff02" not in packet.ipv6.dst:
             is_reversed, temp_flow_identifier = sort_addresses(packet.ipv6.src, packet.ipv6.dst)
             protocol = get_protocol(packet)
             if packet.ipv6.nxt == "43" and packet.ipv6.routing_segleft != "0":
@@ -97,25 +115,40 @@ def get_flows(raw_data):
                 1] + ";" + protocol
 
             flow_dict[flow_identifier].protocol = protocol
-            flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
-            flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
-            add_rpl_info(flow_dict[flow_identifier], packet)
+
+            #To minimize duplication and stuff, we only increment bytes and packages sent, when they are actually sent to the final host
+            if is_packet_at_final_destination(packet):
+                flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
+                flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+                add_rpl_info(flow_dict[flow_identifier], packet)
 
     return flow_dict
 
 
-def is_attack(flow_key):
-    time_stamp = float(re.search("^[^;]+", flow_key).group(0))
-    if time_stamp >= ATTACK_DELAY:
-        if ATTACKER_ID in flow_key and ATTACK_PROTOCOL in flow_key:
-            return True
+def is_anomaly(flow_key):
+    if own_simulation:
+        time_stamp = float(re.search("^[^;]+", flow_key).group(0))
+        if time_stamp >= ATTACK_DELAY:
+            if ATTACKER_IDS in flow_key and ATTACK_PROTOCOL in flow_key:
+                return True
 
-    return False
+        return False
+
+    else:
+        is_blocked = False
+        for ip in get_svelte_ips(ATTACKER_IDS):
+            if ip in flow_key:
+                is_blocked = True
+
+        if is_blocked and ATTACK_PROTOCOL in flow_key:
+            return True
+        else:
+            return False
 
 
 def label_flows(flow_dict):
     for key in flow_dict:
-        if is_attack(key):
+        if is_anomaly(key):
             flow_dict[key].flow_class = "anomaly"
 
 
@@ -177,4 +210,5 @@ def export_as_arff(flow_dict, file):
 flows = get_flows(data)
 label_flows(flows)
 export_as_arff(flows, "svelteSinkhole3")
-print("Just need something here so I can set a breaking point")
+print("debugging point")
+
