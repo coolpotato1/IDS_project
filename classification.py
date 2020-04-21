@@ -28,7 +28,7 @@ def NN_train(data, predictions):
     model.add(Dense(8, activation="relu"))
     model.add(Dense(1, activation="sigmoid"))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    model.fit(data, predictions, batch_size = 100, epochs = 50)
+    model.fit(data, predictions, batch_size = 20, epochs = 100)
     return model
 
 x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize = True)
