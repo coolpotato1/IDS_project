@@ -24,7 +24,7 @@ CSV_DATA_PATH = "Datasets/KDDTest+.txt"
 
 def NN_train(data, predictions):
     model = Sequential()
-    model.add(Dense(20, input_dim = len(data[0]), activation="relu"))
+    model.add(Dense(30, input_dim = len(data[0]), activation="relu"))
     model.add(Dense(5, activation="relu"))
     model.add(Dense(1, activation="sigmoid"))
     model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
