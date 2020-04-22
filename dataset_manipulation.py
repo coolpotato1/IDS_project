@@ -216,4 +216,4 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
 
 print("scripts run apparently")
 #write_attack_column("KDDTrain+_20Percent")
-#combine_datasets("svelteSinkhole3", "KDDTrain+", "combinedDataset")
+#combine_datasets("svelteSinkhole1", "svelteSinkhole2", "svelteSinkhole12")

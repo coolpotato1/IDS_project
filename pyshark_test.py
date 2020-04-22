@@ -12,10 +12,8 @@ from _collections import defaultdict
 # import asyncio
 # import nest_asyncio
 own_simulation = False
-ATTACK_PROTOCOL = "udp" if own_simulation else "udp"
-#ATTACKER_IDS = "209:9:9:9" if own_simulation else ["19", "12", "17", "0c", "11", "0b", "15", "16", "10", "0d"]
-#ATTACKER_IDS = "209:9:9:9" if own_simulation else ["19", "18", "13"]
-ATTACKER_IDS = "209:9:9:9" if own_simulation else ["0c", "0b", "09", "12", "18", "15", "13", "19", "17", "0f", "10", "11"]
+ATTACK_PROTOCOL = "udp" if own_simulation else "icmpv6"
+ATTACKER_ID = ["1a"]
 BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
 ATTACK_DELAY = 480 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
 ATTACK_TYPE = "sinkhole"
@@ -130,14 +128,14 @@ def is_anomaly(flow_key):
     if own_simulation:
         time_stamp = float(re.search("^[^;]+", flow_key).group(0))
         if time_stamp >= ATTACK_DELAY:
-            if ATTACKER_IDS in flow_key and ATTACK_PROTOCOL in flow_key:
+            if ATTACKER_ID in flow_key and ATTACK_PROTOCOL in flow_key:
                 return True
 
         return False
 
     else:
         is_blocked = False
-        for ip in get_svelte_ips(ATTACKER_IDS):
+        for ip in get_svelte_ips(ATTACKER_ID):
             if ip in flow_key:
                 is_blocked = True
 
