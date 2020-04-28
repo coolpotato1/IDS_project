@@ -7,6 +7,7 @@ Created on Fri Apr  3 10:44:02 2020
 import arff
 import pyshark
 import re
+import difflib
 from _collections import defaultdict
 
 # import asyncio
@@ -17,8 +18,8 @@ ATTACKER_ID = ["1a"]
 BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
 ATTACK_DELAY = 480 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
 ATTACK_TYPE = "sinkhole"
-data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1587046554377.pcap")
-
+data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1587044782100.pcap")
+arff_filename = "svelteSinkhole2"
 
 class flow:
     src_bytes = 0
@@ -83,6 +84,11 @@ def add_rpl_info(flow, packet):
 
 
 def is_packet_at_final_destination(packet):
+
+    #Multicast packets dont really have a final destination, so always count those
+    if "ff02" in packet.ipv6.dst:
+        return True
+
     #The wpan address property name depends on the adress mode, so we need to check for that.
     if packet.wpan.dst_addr_mode[-1] == "3":
         #This is kinda a hacky solution, but it is necessary because the ip of border router is ::1, so cannot just match on the last 2 characters as with the other ip's
@@ -95,13 +101,15 @@ def is_packet_at_final_destination(packet):
 def get_flows(raw_data):
     flow_dict = defaultdict(flow)
     is_first = True
+    attack_string = None
+    normal_string = None
     for packet in raw_data:
         if is_first:
             start_time = float(packet.sniff_timestamp)
             is_first = False
 
-        #For the time being we dont want broadcast flows
-        if "ipv6" in packet and "ff02" not in packet.ipv6.dst:
+        #Only accept packets available at the border router (this is for temporary testing, should be refactored)
+        if "ipv6" in packet and "ff02" in packet.ipv6.dst:
             is_reversed, temp_flow_identifier = sort_addresses(packet.ipv6.src, packet.ipv6.dst)
             protocol = get_protocol(packet)
             if packet.ipv6.nxt == "43" and packet.ipv6.routing_segleft != "0":
@@ -220,6 +228,6 @@ def export_as_arff(flow_dict, file):
 
 flows = get_flows(data)
 label_flows(flows)
-export_as_arff(flows, "svelteSinkhole3")
+export_as_arff(flows, arff_filename)
 print("debugging point")
 
