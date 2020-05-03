@@ -47,15 +47,18 @@ def csv_read(datapath):
         data = csv.reader(file)
         return [row for row in data]
 
-#Deprecated (somewhat)
+
+# Deprecated (somewhat)
 def get_attack_column(dataset):
     data = csv_read("Datasets/" + dataset + ".txt")
     return [row[-2] for row in data]
+
 
 def read_attacks_from_file(dataset):
     file = open("Datasets/" + dataset + "_attacks", "r")
     attacks = file.readlines()
     return attacks
+
 
 def write_attack_column(dataset):
     attacks = get_attack_column(dataset)
@@ -64,6 +67,7 @@ def write_attack_column(dataset):
         file.write(attack + "\n")
 
     file.close()
+
 
 def get_attack_types(train_path, test_path):
     test_data = csv_read(test_path)
@@ -105,11 +109,13 @@ def combine_datasets(dataset1, dataset2, combinedDataset):
     file1 = arff.load(open("Datasets/" + dataset1 + ".arff"))
     file2 = arff.load(open("Datasets/" + dataset2 + ".arff"))
 
-    #create the combined attackfile, it is on purpose that the datasets are inverted
+    # create the combined attackfile, it is on purpose that the datasets are inverted
     combine_and_write_attacks(dataset2, dataset1, combinedDataset)
 
     unique_columns = [i for i in range(len(file1["attributes"])) if file1["attributes"][i][0] not in [attribute[0]
-                                                                            for attribute in file2["attributes"]]]
+                                                                                                      for attribute in
+                                                                                                      file2[
+                                                                                                          "attributes"]]]
 
     # needed in case any of the non-unique columns have values that do not exist in the other dataset
     non_unique_columns = [i for i in range(len(file1["attributes"])) if i not in unique_columns]
@@ -173,15 +179,15 @@ def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, is_nn=T
     if actual_classes is None:
         actual_classes = [row.pop(-1) for row in test_data]
 
-    anomalous_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 1]
-    normal_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 0]
+    anomalous_indexes = [i for i in range(len(actual_classes)) if actual_classes[i][0] == 1]
+    normal_indexes = [i for i in range(len(actual_classes)) if actual_classes[i][0] == 0]
     print("Amount of anomalous cases is: ", len(anomalous_indexes))
     print("amount of normal instances: ", len(normal_indexes))
     if (is_nn):
         useless, normal_predictions = model.evaluate(np.asarray([test_data[i] for i in normal_indexes]),
-                                                     [actual_classes[i] for i in normal_indexes])
+                                                     np.asarray([actual_classes[i] for i in normal_indexes]))
         useless, anomaly_predictions = model.evaluate(np.asarray([test_data[i] for i in anomalous_indexes]),
-                                                      [actual_classes[i] for i in anomalous_indexes])
+                                                      np.asarray([actual_classes[i] for i in anomalous_indexes]))
     else:
         normal_predictions = model.score([test_data[i] for i in normal_indexes],
                                          [actual_classes[i] for i in normal_indexes])
@@ -214,6 +220,60 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
 
     return return_scores
 
+
+def remove_nan_attributes(data, attributes):
+    # assumes 2-dimensional data
+    keep_indexes = {}
+    # Last row is label, which we wanna handle separately
+    for i in range(len(data[0]) - 1):
+        keep_indexes[i] = False
+
+    # We want to check for each column of the data, if it fits a numeric attribute or not. We return true if it is,
+    # and false if not. But some values are empty, so it takes several rows before we figure out if they are or not.
+    for row in data:
+
+        for i in range(len(row) - 1):
+            if row[i] == "":
+                continue
+            try:
+                float(row[i])
+                keep_indexes[i] = True
+            except ValueError:
+                pass
+
+    return_data = []
+
+    for row in data:
+        return_data.append([row[i] for i in range(len(row) - 1) if keep_indexes[i] == True])
+        return_data[-1].append(row[-1] if row[-1] == "normal" else "anomaly")
+
+    for i in range(len(return_data)):
+        new_row = [element if element != "" else "0" for element in return_data[i]]
+        return_data[i] = new_row
+
+    #Minus 1 cause we add the label attribute manually
+    return_attributes = [(attributes[i], "REAL") for i in range(len(attributes) - 1) if keep_indexes[i] == True]
+    return_attributes.append((attributes[-1], ["normal", "anomaly"]))
+    return return_data, return_attributes
+
+
+def packet_csv_to_arff(datafile_in, datafile_out):
+    data = csv_read("Datasets/" + datafile_in + ".csv")
+    attributes = data.pop(0)
+    data, attributes = remove_nan_attributes(data, attributes)
+
+    # Refactor to arff method at some point
+    return_arff = {
+        'relation': 'MitM data',
+        'description': '',
+        'data': data,
+        'attributes': attributes
+    }
+
+    arff.dump(return_arff, open("Datasets/" + datafile_out + ".arff", "w+"))
+
+
 print("scripts run apparently")
-#write_attack_column("KDDTrain+_20Percent")
-#combine_datasets("svelteSinkhole3", "KDDTrain+", "combinedDataset")
+# write_attack_column("KDDTrain+_20Percent")
+# combine_datasets("svelteSinkhole3", "KDDTrain+", "combinedDataset")
+#packet_csv_to_arff("MitM", "MitM")
