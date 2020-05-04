@@ -26,9 +26,8 @@ CSV_DATA_PATH = "Datasets/KDDTest+.txt"
 
 def NN_train(data, predictions):
     model = Sequential()
-    model.add(Dense(50, input_dim = len(data[0]), activation="relu"))
-    model.add(Dense(100, activation="relu"))
-    model.add(Dense(10, activation="relu"))
+    model.add(Dense(30, input_dim = len(data[0]), activation="relu"))
+    model.add(Dense(12, activation="relu"))
     model.add(Dense(1, activation="sigmoid"))
     adam = optimizers.adam(lr=0.01)
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
@@ -59,29 +58,30 @@ print("Getting to PCA")
 #x_test = pca.transform(x_test)
 
 
-#clf = RandomForestClassifier(n_estimators = 150)
+clf = RandomForestClassifier(n_estimators = 150)
 #clf = SVC()
 
 
-#print("Doing RFE")
-#rfe = RFE(clf, 16, 2)
-#x_train = rfe.fit_transform(x_train, y_train)
-#x_test = rfe.transform(x_test)
+print("Doing RFE")
+rfe = RFE(clf, 16, 2)
+x_train = rfe.fit_transform(x_train, y_train)
+x_test = rfe.transform(x_test)
 #print("Finished RFE")
 print("Fitting classifier")
-#clf.fit(x_train, y_train)
+clf.fit(x_train, y_train)
 
-pre_train = time.time()
-clf = NN_train(x_train, y_train)
-post_train = time.time()
+#pre_train = time.time()
+#clf = NN_train(x_train, y_train)
+#post_train = time.time()
 
 #For the NN model, first value is loss
-normal_score, anomaly_score, overall_score = man.get_normal_and_anomaly_scores(clf, x_test, y_test)
+precision, recall, fscore, accuracy, own_precision = man.get_normal_and_anomaly_scores(clf, x_test, y_test, is_nn=False)
 
 #results = clf.score(x_test, y_test)
-print("Normal accuracy is: ", normal_score)
-print("Anomaly accuracy is: ", anomaly_score)
-print("Overall accuracy is: ", overall_score)
-print("Time for training in seconds is:", post_train - pre_train)
+print("Precision is: ", precision)
+print("Recall is: ", recall)
+print("Fscore is: ", fscore)
+print("Overall accuracy is: ", accuracy)
+print("self-calculated precision is: ", own_precision)
 #print("normal results are:", results)
 #print("specific results are:", man.get_specific_scores(CSV_DATA_PATH, clf, x_test, y_test, [attacks.NORMAL.value, attacks.NEPTUNE.value], True))

@@ -7,6 +7,7 @@ Created on Tue Mar  3 11:19:56 2020
 import csv
 import arff
 import numpy as np
+from sklearn.metrics import precision_recall_fscore_support
 from NSL_KDD_attack_types import attack_types as attacks
 
 
@@ -174,28 +175,21 @@ def combine_datasets(dataset1, dataset2, combinedDataset):
     arff.dump(return_arff, open("Datasets/" + combinedDataset + ".arff", "w+"))
 
 
-def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, is_nn=True):
+def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, fscore_beta = 1, is_nn = True):
     # If no actual classes are given, its because they are part of the data, and we should extract them
     if actual_classes is None:
         actual_classes = [row.pop(-1) for row in test_data]
 
-    anomalous_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 1]
-    normal_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 0]
-    print("Amount of anomalous cases is: ", len(anomalous_indexes))
-    print("amount of normal instances: ", len(normal_indexes))
-    if (is_nn):
-        useless, normal_predictions = model.evaluate(np.asarray([test_data[i] for i in normal_indexes]),
-                                                     np.asarray([actual_classes[i] for i in normal_indexes]))
-        useless, recall = model.evaluate(np.asarray([test_data[i] for i in anomalous_indexes]),
-                                                      np.asarray([actual_classes[i] for i in anomalous_indexes]))
+    if is_nn:
+        predicted_classes = model.predict_classes(test_data)
     else:
-        normal_predictions = model.score([test_data[i] for i in normal_indexes],
-                                         [actual_classes[i] for i in normal_indexes])
-        recall = model.score([test_data[i] for i in anomalous_indexes],
-                                          [actual_classes[i] for i in anomalous_indexes])
+        predicted_classes = model.predict(test_data)
+    precision, recall, fscore, count = precision_recall_fscore_support(actual_classes, predicted_classes, beta=fscore_beta, average="binary")
+    accuracy = len([i for i in range(len(predicted_classes)) if predicted_classes[i] == actual_classes[i]])/len(actual_classes)
+    self_calculated_precision = len([i for i in range(len(predicted_classes)) if predicted_classes[i] == 1 and predicted_classes[i] == actual_classes[i]]) /\
+                                len([i for i in range(len(predicted_classes)) if predicted_classes[i] == 1])
 
-    overall_accuracy = (len(anomalous_indexes) * recall + len(normal_indexes) * normal_predictions) / len(actual_classes)
-    return normal_predictions, recall, overall_accuracy
+    return precision, recall, fscore, accuracy, self_calculated_precision
 
 
 # Currently this one only works on NSL-KDD datasets
