@@ -179,22 +179,23 @@ def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, is_nn=T
     if actual_classes is None:
         actual_classes = [row.pop(-1) for row in test_data]
 
-    anomalous_indexes = [i for i in range(len(actual_classes)) if actual_classes[i][0] == 1]
-    normal_indexes = [i for i in range(len(actual_classes)) if actual_classes[i][0] == 0]
+    anomalous_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 1]
+    normal_indexes = [i for i in range(len(actual_classes)) if actual_classes[i] == 0]
     print("Amount of anomalous cases is: ", len(anomalous_indexes))
     print("amount of normal instances: ", len(normal_indexes))
     if (is_nn):
         useless, normal_predictions = model.evaluate(np.asarray([test_data[i] for i in normal_indexes]),
                                                      np.asarray([actual_classes[i] for i in normal_indexes]))
-        useless, anomaly_predictions = model.evaluate(np.asarray([test_data[i] for i in anomalous_indexes]),
+        useless, recall = model.evaluate(np.asarray([test_data[i] for i in anomalous_indexes]),
                                                       np.asarray([actual_classes[i] for i in anomalous_indexes]))
     else:
         normal_predictions = model.score([test_data[i] for i in normal_indexes],
                                          [actual_classes[i] for i in normal_indexes])
-        anomaly_predictions = model.score([test_data[i] for i in anomalous_indexes],
+        recall = model.score([test_data[i] for i in anomalous_indexes],
                                           [actual_classes[i] for i in anomalous_indexes])
 
-    return normal_predictions, anomaly_predictions
+    overall_accuracy = (len(anomalous_indexes) * recall + len(normal_indexes) * normal_predictions) / len(actual_classes)
+    return normal_predictions, recall, overall_accuracy
 
 
 # Currently this one only works on NSL-KDD datasets
