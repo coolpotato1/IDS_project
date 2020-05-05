@@ -67,4 +67,7 @@ class attack_types(enum.Enum):
     ALL_ATTACKS_BUT_R2L = DOS + PROBE + U2R
     ALL_ATTACKS_BUT_U2R = DOS + PROBE + R2L
     
-    ALL_ATTACKS = DOS + PROBE + R2L + U2R
+    KDD_ATTACKS = DOS + PROBE + R2L + U2R
+
+    #Custom made attacks
+    MITM = ["MitM"]

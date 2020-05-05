@@ -29,23 +29,23 @@ def NN_train(data, predictions):
     model.add(Dense(25, input_dim = len(data[0]), activation="relu"))
     model.add(Dense(12, activation="relu"))
     model.add(Dense(1, activation="sigmoid"))
-    adam = optimizers.adam(lr=0.001)
+    adam = optimizers.adam(lr=0.002)
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(data, predictions, batch_size = 100, epochs = 50)
+    model.fit(data, predictions, batch_size = 200, epochs = 30)
     return model
 
-x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize = True)
-
-#x_test, y_test, attributes = pre.load_and_process_data(TEST_DATA_PATH, is_test_data = True, attributes = attributes, do_normalize= True)
+x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize=True)
+actual_classes =np.squeeze(man.csv_read("Datasets/MitMKDDTest_attacks"))
+x_test, y_test, attributes = pre.load_and_process_data(TEST_DATA_PATH, is_test_data = True, attributes = attributes, do_normalize=True)
 #x_test = np.asarray(x_test).astype(np.float32)
 
 x_train = np.asarray(x_train).astype(np.float32)
 
-x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2)
+#x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2)
 
 print("Oversampling underrepresented class")
-ros = RandomOverSampler()
-x_train, y_train = ros.fit_resample(x_train, y_train)
+#ros = RandomOverSampler()
+#x_train, y_train = ros.fit_resample(x_train, y_train)
 
 print("Getting to PCA")
 pca = PCA(N_COMPONENTS)
@@ -59,8 +59,8 @@ x_test = pca.transform(x_test)
 #clf = SVC()
 
 
-print("Doing RFE")
-#rfe = RFE(clf, 16, 2)
+#print("Doing RFE")
+#rfe = RFE(clf, 20, 4)
 #x_train = rfe.fit_transform(x_train, y_train)
 #x_test = rfe.transform(x_test)
 #print("Finished RFE")
@@ -72,7 +72,7 @@ clf = NN_train(x_train, y_train)
 #post_train = time.time()
 
 #For the NN model, first value is loss
-precision, recall, fscore, accuracy, own_precision = man.get_normal_and_anomaly_scores(clf, x_test, y_test, is_nn=True)
+precision, recall, fscore, accuracy, own_precision = man.get_normal_and_anomaly_scores(clf, x_test, y_test)
 
 #results = clf.score(x_test, y_test)
 print("Precision is: ", precision)
@@ -81,4 +81,5 @@ print("Fscore is: ", fscore)
 print("Overall accuracy is: ", accuracy)
 print("self-calculated precision is: ", own_precision)
 #print("normal results are:", results)
-#print("specific results are:", man.get_specific_scores(CSV_DATA_PATH, clf, x_test, y_test, [attacks.NORMAL.value, attacks.NEPTUNE.value], True))
+print("specific recalls are:", man.get_specific_recall(clf, x_test, actual_classes,
+                                                       [attacks.NORMAL.value, attacks.KDD_ATTACKS.value, attacks.MITM.value], keep_separated=True))

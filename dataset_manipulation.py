@@ -84,6 +84,10 @@ def get_attack_types(train_path, test_path):
 def match_attribute_datatypes(data, attributes):
     indexes = []
     for i in range(len(attributes)):
+
+        # Do not allow None values in class labels, as it should always be labeled as either anomaly or normal
+        if attributes[i][0] == "class":
+            continue
         if type(attributes[i][1]).__name__ == "list" and "None" not in attributes[i][1]:
             attributes[i][1].append("None")
             indexes.append(i)
@@ -217,6 +221,29 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
     return return_scores
 
 
+def get_specific_recall(clf, data, actual_classes, attack_types, keep_separated=False, is_nn=True):
+    predictions = []
+    recalls = []
+    if not keep_separated:
+        if is_nn:
+            predictions.extend(np.squeeze(clf.predict_classes(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack_types]))))
+        else:
+            predictions.extend(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack_types]))))
+
+        # As we have separated by attack, all predictions should be one. Therefore we can find recall this way
+        recalls.append(len([element for element in predictions if element == 1]) / len(predictions))
+    else:
+        for attack in attack_types:
+            if is_nn:
+                predictions.append(np.squeeze(clf.predict_classes(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack]))))
+            else:
+                predictions.append(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] == attack]))))
+
+            recalls.append(len([element for element in predictions[-1] if element == 1]) / len(predictions[-1]))
+
+    return recalls
+
+
 def remove_nan_attributes(data, attributes):
     # assumes 2-dimensional data
     keep_indexes = {}
@@ -249,7 +276,9 @@ def remove_nan_attributes(data, attributes):
 
     #Minus 1 cause we add the label attribute manually
     return_attributes = [(attributes[i], "REAL") for i in range(len(attributes) - 1) if keep_indexes[i] == True]
-    return_attributes.append((attributes[-1], ["normal", "anomaly"]))
+
+    #The class attribute needs to match the standard format (learned this the hard way)
+    return_attributes.append(("class", ["normal", "anomaly"]))
     return return_data, return_attributes
 
 def export_arff(data, attributes, filename, relation="Data", description=None):
@@ -296,5 +325,5 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relat
 
 print("scripts run apparently")
 # write_attack_column("KDDTrain+_20Percent")
-combine_datasets("MitMTest", "KDDTest+", "MitMKDDTest")
+#combine_datasets("MitMTrain", "KDDTrain+", "MitMKDDTrain")
 #packet_csv_to_arff("MitM", "MitM", "MitM", 0.2)
