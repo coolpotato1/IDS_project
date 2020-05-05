@@ -8,6 +8,7 @@ import csv
 import arff
 import numpy as np
 from sklearn.metrics import precision_recall_fscore_support
+from sklearn.model_selection import train_test_split
 from NSL_KDD_attack_types import attack_types as attacks
 
 
@@ -251,24 +252,49 @@ def remove_nan_attributes(data, attributes):
     return_attributes.append((attributes[-1], ["normal", "anomaly"]))
     return return_data, return_attributes
 
+def export_arff(data, attributes, filename, relation="Data", description=None):
+    exported_arff = {
+        'relation': relation,
+        'description': description,
+        'data': data,
+        'attributes': attributes
+    }
 
-def packet_csv_to_arff(datafile_in, datafile_out):
+    arff.dump(exported_arff, open("Datasets/" + filename + ".arff", "w+"))
+
+
+def export_attacks(attack_list, file):
+
+    f = open(file, "w+")
+    for attack in attack_list:
+        f.write(attack + "\n")
+
+    f.close()
+    print("exported attacks")
+
+
+# Currently only deals with one attack type
+def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relation="Data"):
     data = csv_read("Datasets/" + datafile_in + ".csv")
     attributes = data.pop(0)
     data, attributes = remove_nan_attributes(data, attributes)
 
     # Refactor to arff method at some point
-    return_arff = {
-        'relation': 'MitM data',
-        'description': '',
-        'data': data,
-        'attributes': attributes
-    }
+    if split is not None:
+        train_data, test_data = train_test_split(data, test_size=0.2)
+        export_arff(train_data, attributes, datafile_out + "Train", relation=relation + "_Train")
+        export_arff(test_data, attributes, datafile_out + "Test", relation=relation + "_Test")
 
-    arff.dump(return_arff, open("Datasets/" + datafile_out + ".arff", "w+"))
+        export_attacks([attack_type if row[-1] == "anomaly" else "normal" for row in train_data], "Datasets/" + datafile_out + "Train_attacks")
+        export_attacks([attack_type if row[-1] == "anomaly" else "normal" for row in test_data], "Datasets/" + datafile_out + "Test_attacks")
+
+    else:
+        export_arff(data, attributes, datafile_out, relation=relation)
+        export_attacks([row[-1] for row in data], "Datasets/" + datafile_out + "_attacks")
+
 
 
 print("scripts run apparently")
 # write_attack_column("KDDTrain+_20Percent")
-# combine_datasets("svelteSinkhole3", "KDDTrain+", "combinedDataset")
-#packet_csv_to_arff("MitM", "MitM")
+combine_datasets("MitMTest", "KDDTest+", "MitMKDDTest")
+#packet_csv_to_arff("MitM", "MitM", "MitM", 0.2)

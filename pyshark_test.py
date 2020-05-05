@@ -8,7 +8,7 @@ import arff
 import pyshark
 import re
 from _collections import defaultdict
-
+from dataset_manipulation import export_attacks
 # import asyncio
 # import nest_asyncio
 own_simulation = False
@@ -194,16 +194,6 @@ def get_packet_loss(packet_dict):
 #                 print(packet.sniff_timestamp)
 
 
-def export_attacks(flow_dict, file):
-    attack_list = [ATTACK_TYPE if flow_dict[key].flow_class == "anomaly" else "normal" for key in flow_dict]
-
-    f = open(file, "w+")
-    for attack in attack_list:
-        f.write(attack + "\n")
-
-    f.close()
-    print("exported attacks")
-
 def export_as_arff(flow_dict, file):
     attributes = flow.get_flow_attributes()
     data = [flow_dict[key].get_flow_as_list() for key in flow_dict]
@@ -218,7 +208,8 @@ def export_as_arff(flow_dict, file):
     arff.dump(export_arff, open("Datasets/" + file + ".arff", "w+"))
     print("exported datasets")
 
-    export_attacks(flow_dict, "Datasets/" + file + "_attacks")
+    export_attacks([ATTACK_TYPE if flow_dict[key].flow_class == "anomaly" else "normal" for key in flow_dict],
+                   "Datasets/" + file + "_attacks")
 
 flows = get_flows(data)
 label_flows(flows)
