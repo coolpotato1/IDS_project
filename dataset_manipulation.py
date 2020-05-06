@@ -191,10 +191,8 @@ def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, fscore_
         predicted_classes = model.predict(test_data)
     precision, recall, fscore, count = precision_recall_fscore_support(actual_classes, predicted_classes, beta=fscore_beta, average="binary")
     accuracy = len([i for i in range(len(predicted_classes)) if predicted_classes[i] == actual_classes[i]])/len(actual_classes)
-    self_calculated_precision = len([i for i in range(len(predicted_classes)) if predicted_classes[i] == 1 and predicted_classes[i] == actual_classes[i]]) /\
-                                len([i for i in range(len(predicted_classes)) if predicted_classes[i] == 1])
 
-    return precision, recall, fscore, accuracy, self_calculated_precision
+    return precision, recall, fscore, accuracy
 
 
 # Currently this one only works on NSL-KDD datasets
@@ -221,10 +219,23 @@ def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_se
     return return_scores
 
 
+# Normal classes with "not keep_separated" have not been tested yet
 def get_specific_recall(clf, data, actual_classes, attack_types, keep_separated=False, is_nn=True):
     predictions = []
     recalls = []
     if not keep_separated:
+        if "normal" in attack_types:
+            attack_types.remove("normal")
+            if is_nn:
+                predictions.extend(np.squeeze(clf.predict_classes(
+                    np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] == "normal"]))))
+            else:
+                predictions.extend(np.squeeze(clf.predict(
+                    np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] == "normal"]))))
+
+            # Invert predictions (because correct normal prediction is 0, but later we use 1's to count it
+            predictions = [int(element == 0) for element in predictions]
+
         if is_nn:
             predictions.extend(np.squeeze(clf.predict_classes(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack_types]))))
         else:
@@ -237,7 +248,10 @@ def get_specific_recall(clf, data, actual_classes, attack_types, keep_separated=
             if is_nn:
                 predictions.append(np.squeeze(clf.predict_classes(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack]))))
             else:
-                predictions.append(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] == attack]))))
+                predictions.append(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack]))))
+
+            if "normal" in attack:
+                predictions[-1] = [int(element == 0) for element in predictions[-1]]
 
             recalls.append(len([element for element in predictions[-1] if element == 1]) / len(predictions[-1]))
 

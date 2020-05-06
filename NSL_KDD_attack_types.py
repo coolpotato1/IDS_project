@@ -26,6 +26,8 @@ class attack_types(enum.Enum):
     NAMED = ["named"]
     NEPTUNE = ["neptune"]
     NMAP = ["nmap"]
+
+    #Due to functionality in get_specific_recall, norrmal should not be included in larger attack type categories
     NORMAL = ["normal"]
     PERL = ["perl"]
     PHF = ["phf"]

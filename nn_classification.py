@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.svm import SVC
 from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE
-from imblearn.over_sampling import RandomOverSampler
+import classification_utils as cl
 import time
 N_COMPONENTS = 20
 TRAIN_DATA_PATH = "Datasets/MitMKDDTrain.arff"
@@ -43,9 +43,8 @@ x_train = np.asarray(x_train).astype(np.float32)
 
 #x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2)
 
-print("Oversampling underrepresented class")
-#ros = RandomOverSampler()
-#x_train, y_train = ros.fit_resample(x_train, y_train)
+print("undersampling overrepresented class")
+x_train, y_train = cl.sample(x_train, y_train, sampling_type="under")
 
 print("Getting to PCA")
 pca = PCA(N_COMPONENTS)
@@ -72,14 +71,13 @@ clf = NN_train(x_train, y_train)
 #post_train = time.time()
 
 #For the NN model, first value is loss
-precision, recall, fscore, accuracy, own_precision = man.get_normal_and_anomaly_scores(clf, x_test, y_test)
+precision, recall, fscore, accuracy = man.get_normal_and_anomaly_scores(clf, x_test, y_test)
 
 #results = clf.score(x_test, y_test)
 print("Precision is: ", precision)
 print("Recall is: ", recall)
 print("Fscore is: ", fscore)
 print("Overall accuracy is: ", accuracy)
-print("self-calculated precision is: ", own_precision)
 #print("normal results are:", results)
 print("specific recalls are:", man.get_specific_recall(clf, x_test, actual_classes,
-                                                       [attacks.NORMAL.value, attacks.KDD_ATTACKS.value, attacks.MITM.value], keep_separated=True))
+                                                       [attacks.NORMAL.value, attacks.DOS.value, attacks.PROBE.value, attacks.MITM.value], keep_separated=True))
