@@ -31,7 +31,7 @@ def NN_train(data, predictions):
     model.add(Dense(1, activation="sigmoid"))
     adam = optimizers.adam(lr=0.002)
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(data, predictions, batch_size = 200, epochs = 30)
+    model.fit(data, predictions, batch_size = 200, epochs = 20)
     return model
 
 x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize=True)
@@ -80,4 +80,4 @@ print("Fscore is: ", fscore)
 print("Overall accuracy is: ", accuracy)
 #print("normal results are:", results)
 print("specific recalls are:", man.get_specific_recall(clf, x_test, actual_classes,
-                                                       [attacks.NORMAL.value, attacks.DOS.value, attacks.PROBE.value, attacks.MITM.value], keep_separated=True))
+                                                       [attacks.NORMAL.value, attacks.DOS.value, attacks.PROBE.value, attacks.R2L.value, attacks.U2R.value, attacks.MITM.value], keep_separated=True))
