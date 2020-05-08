@@ -81,7 +81,7 @@ def add_rpl_info(flow, packet):
         flow.dio_count += 1
     elif packet.icmpv6.code == "2":
         flow.dao_count +=1
-    elif packet.icmpv6.cod == "3":
+    elif packet.icmpv6.code == "3":
         pass
     else:
         print("unexpected icmpv6 code")
