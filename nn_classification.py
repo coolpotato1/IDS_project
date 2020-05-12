@@ -20,8 +20,9 @@ from sklearn.feature_selection import RFE
 import classification_utils as cl
 import time
 N_COMPONENTS = 20
-TRAIN_DATA_PATH = "Datasets/MitMKDDTrain.arff"
-TEST_DATA_PATH = "Datasets/MitMKDDTest.arff"
+TRAIN_DATA_PATH = "Datasets/UDPMitMKDDTrain.arff"
+TEST_DATASET = "UDPMitMKDDTest"
+TEST_DATA_PATH = "Datasets/" + TEST_DATASET + ".arff"
 CSV_DATA_PATH = "Datasets/KDDTest+.txt"
 
 def NN_train(data, predictions):
@@ -35,7 +36,7 @@ def NN_train(data, predictions):
     return model
 
 x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize=True)
-actual_classes =np.squeeze(man.csv_read("Datasets/MitMKDDTest_attacks"))
+actual_classes =np.squeeze(man.csv_read("Datasets/" + TEST_DATASET + "_attacks"))
 x_test, y_test, attributes = pre.load_and_process_data(TEST_DATA_PATH, is_test_data = True, attributes = attributes, do_normalize=True)
 #x_test = np.asarray(x_test).astype(np.float32)
 

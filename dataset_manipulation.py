@@ -30,18 +30,25 @@ def remove_attacks(data, filter_indices):
 
 
 def create_filtered_dataset(file_name, filtered_attacks):
-    file = arff.load(open(file_name + ".arff"))
+    file = arff.load(open("Datasets/" + file_name + ".arff"))
     original_data = file['data']
     attributes = file['attributes']
-
-    new_data = remove_attacks(original_data, get_filter_indices(filtered_attacks, file_name + ".txt"))
+    attack_types = get_attack_column(file_name)
+    new_data = remove_attacks(original_data, get_filter_indices(filtered_attacks, "Datasets/" + file_name + ".txt"))
+    new_attack_types = remove_attacks(attack_types, get_filter_indices(filtered_attacks, "Datasets/" + file_name + ".txt"))
     return_arff = {
         'relation': 'KDDFiltered',
         'description': '',
         'data': new_data,
         'attributes': attributes
     }
-    arff.dump(return_arff, open(file_name + "_filtered.arff", "w+"))
+    arff.dump(return_arff, open("Datasets/" + file_name + "_filtered.arff", "w+"))
+
+    file = open("Datasets/" + file_name + "_filtered_attacks", "w+")
+    for attack in new_attack_types:
+        file.write(attack)
+
+    file.close()
 
 
 def csv_read(datapath):
@@ -321,7 +328,7 @@ def export_attacks(attack_list, file):
 
 
 # Currently only deals with one attack type
-def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relation="Data"):
+def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relation="Data", sampling=None):
     data = csv_read("Datasets/" + datafile_in + ".csv")
     attributes = data.pop(0)
     data, attributes = remove_nan_attributes(data, attributes)
@@ -342,6 +349,7 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relat
 
 
 print("scripts run apparently")
+create_filtered_dataset("KDDTest+", attacks.U2R.value + attacks.R2L.value)
 # write_attack_column("KDDTrain+_20Percent")
 #combine_datasets("coojaData3", "MitMKDDTest", "UDPMitMKDDTest")
 #packet_csv_to_arff("MitM", "MitM", "MitM", 0.2)
