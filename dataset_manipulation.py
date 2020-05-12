@@ -7,6 +7,7 @@ Created on Tue Mar  3 11:19:56 2020
 import csv
 import arff
 import numpy as np
+import classification_utils as u
 from sklearn.metrics import precision_recall_fscore_support
 from sklearn.model_selection import train_test_split
 from NSL_KDD_attack_types import attack_types as attacks
@@ -46,7 +47,7 @@ def create_filtered_dataset(file_name, filtered_attacks):
 
     file = open("Datasets/" + file_name + "_filtered_attacks", "w+")
     for attack in new_attack_types:
-        file.write(attack)
+        file.write(attack + "\n")
 
     file.close()
 
@@ -112,24 +113,19 @@ def match_attribute_datatypes(data, attributes):
                 row[i] = "None"
 
 
-def combine_and_write_attacks(dataset1, dataset2, attacks_out_file):
+def combine_and_return_attacks(dataset1, dataset2):
     attacks1 = read_attacks_from_file(dataset1)
     attacks2 = read_attacks_from_file(dataset2)
-    attacks = attacks1 + attacks2
-    file = open("Datasets/" + attacks_out_file + "_attacks", "w+")
-    for attack in attacks:
-        file.write(attack)
-
-    file.close()
+    return attacks1 + attacks2
 
 
 # This method definitely needs to be refactored, holy fuck its ugly. This has probably added +5 hours to technical debt.
-def combine_datasets(dataset1, dataset2, combinedDataset):
+def combine_datasets(dataset1, dataset2, combinedDataset, sampling=None):
     file1 = arff.load(open("Datasets/" + dataset1 + ".arff"))
     file2 = arff.load(open("Datasets/" + dataset2 + ".arff"))
 
     # create the combined attackfile, it is on purpose that the datasets are inverted
-    combine_and_write_attacks(dataset2, dataset1, combinedDataset)
+    combined_attacks = combine_and_return_attacks(dataset2, dataset1)
 
     unique_columns = [i for i in range(len(file1["attributes"])) if file1["attributes"][i][0]
                       not in [attribute[0] for attribute in file2["attributes"]]]
@@ -182,12 +178,22 @@ def combine_datasets(dataset1, dataset2, combinedDataset):
 
     match_attribute_datatypes(file2["data"], file2["attributes"])
 
+    if sampling is not None:
+        file2["data"], combined_attacks = u.sample_with_attacks(file2["data"], combined_attacks, sampling)
+
+
     return_arff = {
         'relation': 'CombinedData',
         'description': '',
         'data': file2["data"],
         'attributes': file2["attributes"]
     }
+
+    file = open("Datasets/" + combinedDataset + "_attacks", "w+")
+    for attack in combined_attacks:
+        file.write(attack)
+
+    file.close()
     arff.dump(return_arff, open("Datasets/" + combinedDataset + ".arff", "w+"))
 
 
@@ -333,6 +339,9 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relat
     attributes = data.pop(0)
     data, attributes = remove_nan_attributes(data, attributes)
 
+    if sampling is not None:
+        data = u.sample_data(data, sampling=sampling)
+
     # Refactor to arff method at some point
     if split is not None:
         train_data, test_data = train_test_split(data, test_size=0.2)
@@ -349,7 +358,7 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relat
 
 
 print("scripts run apparently")
-create_filtered_dataset("KDDTest+", attacks.U2R.value + attacks.R2L.value)
+#create_filtered_dataset("KDDTest+", attacks.U2R.value + attacks.R2L.value)
 # write_attack_column("KDDTrain+_20Percent")
 #combine_datasets("coojaData3", "MitMKDDTest", "UDPMitMKDDTest")
 #packet_csv_to_arff("MitM", "MitM", "MitM", 0.2)

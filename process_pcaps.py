@@ -8,6 +8,7 @@ import arff
 import pyshark
 import re
 import numpy as np
+from classification_utils import sample_data
 from _collections import defaultdict
 from dataset_manipulation import export_attacks
 # import asyncio
@@ -212,10 +213,12 @@ def get_packet_loss(packet_dict):
 #                 print(packet.sniff_timestamp)
 
 
-def export_as_arff(flow_dict, file):
+def export_as_arff(flow_dict, file, sampling=None):
     attributes = flow.get_flow_attributes()
     data = [flow_dict[key].get_flow_as_list() for key in flow_dict]
 
+    if sampling is not None:
+        data = sample_data(data, sampling)
     export_arff = {
         'relation': 'CoojaData',
         'description': 'The simulated data from the IoT environment',

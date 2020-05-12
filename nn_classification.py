@@ -44,9 +44,11 @@ x_train = np.asarray(x_train).astype(np.float32)
 
 #x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2)
 
-print("undersampling overrepresented class")
-x_train, y_train = cl.sample(x_train, y_train, sampling_type="under")
+#print("undersampling overrepresented class")
+#x_train, y_train = cl.sample(x_train, y_train, sampling_type="under")
 
+print("length of the training set is: ", len(x_train))
+print("length of test set is: ", len(x_test))
 print("Getting to PCA")
 pca = PCA(N_COMPONENTS)
 pca.fit(x_train)
@@ -81,4 +83,4 @@ print("Fscore is: ", fscore)
 print("Overall accuracy is: ", accuracy)
 #print("normal results are:", results)
 print("specific recalls are:", man.get_specific_recall(clf, x_test, actual_classes,
-                                                       [attacks.NORMAL.value, attacks.DOS.value, attacks.PROBE.value, attacks.R2L.value, attacks.U2R.value, attacks.MITM.value], keep_separated=True))
+                                                       [attacks.NORMAL.value, attacks.DOS.value, attacks.PROBE.value, attacks.MITM.value, attacks.UDP_DOS.value], keep_separated=True))
