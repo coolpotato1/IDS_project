@@ -86,13 +86,19 @@ def match_attribute_datatypes(data, attributes):
     for i in range(len(attributes)):
 
         # Do not allow None values in class labels, as it should always be labeled as either anomaly or normal
+        # To support lists with different types, you could save the indexes with a tuple that includes list type
         if attributes[i][0] == "class":
             continue
-        if type(attributes[i][1]).__name__ == "list" and "None" not in attributes[i][1]:
-            attributes[i][1].append("None")
+        if type(attributes[i][1]).__name__ == "list":
             indexes.append(i)
 
+            if "None" not in attributes[i][1]:
+                attributes[i][1].append("None")
+
+
+
     # Iterate through data, and if the value in a column that takes string values, is not a string value, we replace it with the string "None"
+    # This will bug out with an integer list
     for row in data:
         for i in indexes:
             if type(row[i]).__name__ != "str":
@@ -118,10 +124,8 @@ def combine_datasets(dataset1, dataset2, combinedDataset):
     # create the combined attackfile, it is on purpose that the datasets are inverted
     combine_and_write_attacks(dataset2, dataset1, combinedDataset)
 
-    unique_columns = [i for i in range(len(file1["attributes"])) if file1["attributes"][i][0] not in [attribute[0]
-                                                                                                      for attribute in
-                                                                                                      file2[
-                                                                                                          "attributes"]]]
+    unique_columns = [i for i in range(len(file1["attributes"])) if file1["attributes"][i][0]
+                      not in [attribute[0] for attribute in file2["attributes"]]]
 
     # needed in case any of the non-unique columns have values that do not exist in the other dataset
     non_unique_columns = [i for i in range(len(file1["attributes"])) if i not in unique_columns]
@@ -339,5 +343,5 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relat
 
 print("scripts run apparently")
 # write_attack_column("KDDTrain+_20Percent")
-#combine_datasets("MitMTrain", "KDDTrain+", "MitMKDDTrain")
+#combine_datasets("coojaData3", "MitMKDDTest", "UDPMitMKDDTest")
 #packet_csv_to_arff("MitM", "MitM", "MitM", 0.2)
