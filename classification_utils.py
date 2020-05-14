@@ -21,9 +21,11 @@ def sample_with_attacks(dataset, attacks, sampling_type="over"):
 
     return dataset, attacks
 
+
+# Refactor for better boolean control later
 def sample(x_train, y_train, sampling_type="over"):
-    print("Amount of anomalies before: ", len([1 for i in y_train if i != 0 and "normal" not in i]))
-    print("Amount of normal occurences before: ", len([1 for i in y_train if i == 0 or "normal" in i]))
+    print("Amount of anomalies before: ", len([1 for i in y_train if is_anomaly(i)]))
+    print("Amount of normal occurences before: ", len([1 for i in y_train if not is_anomaly(i)]))
 
     if sampling_type == "over":
         ros = RandomOverSampler()
@@ -32,7 +34,16 @@ def sample(x_train, y_train, sampling_type="over"):
         rus = RandomUnderSampler()
         x_train, y_train = rus.fit_resample(x_train, y_train)
 
-    print("Amount of anomalies after: ", len([1 for i in y_train if i != 0 and "normal" not in i]))
-    print("Amount of normal occurences after: ", len([1 for i in y_train if i == 0 or "normal" in i]))
+    print("Amount of anomalies after: ", len([1 for i in y_train if is_anomaly(i)]))
+    print("Amount of normal occurences after: ", len([1 for i in y_train if not is_anomaly(i)]))
 
     return x_train, y_train
+
+
+def is_anomaly(label):
+    if type(label) is str:
+        return "normal" not in label
+    elif type(label) is int:
+        return label == 1
+    else:
+        print("unknown label type")

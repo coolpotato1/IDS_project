@@ -360,5 +360,5 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relat
 print("scripts run apparently")
 #create_filtered_dataset("KDDTest+", attacks.U2R.value + attacks.R2L.value)
 # write_attack_column("KDDTrain+_20Percent")
-#combine_datasets("coojaData3", "MitMKDDTest", "UDPMitMKDDTest")
+#combine_datasets("combinedCoojas", "MitMKDDTrain", "UDPMitMKDDTrain")
 #packet_csv_to_arff("MitM", "MitM", "MitM", 0.2)

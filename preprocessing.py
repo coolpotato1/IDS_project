@@ -114,10 +114,10 @@ def embedded_insert(data, data_attributes, column_no, is_test_data=False):
     return data_return
 
 
-def choose_and_use_encoding(data, data_attributes, column_no, is_test_data):
+def choose_and_use_encoding(data, data_attributes, column_no):
     if type(data_attributes[column_no][1]) != list or len(data_attributes[column_no][1]) <= 2:
         return data
-    elif len(data_attributes[column_no][1]) <= 4:
+    elif len(data_attributes[column_no][1]) <= 6:
         return one_hot_insert(data, data_attributes, column_no)
     else:
         return binary_insert(data, data_attributes, column_no)
@@ -147,9 +147,9 @@ def normalize(data):
     return return_data
 
 
-def process_data(data_values, data_attributes, is_test_data):
+def process_data(data_values, data_attributes):
     for i in range(len(data_attributes), 1, -1):
-        data_values = choose_and_use_encoding(data_values, data_attributes, -i, is_test_data)
+        data_values = choose_and_use_encoding(data_values, data_attributes, -i)
 
     # Assign the class values
     predictions = []
@@ -160,16 +160,15 @@ def process_data(data_values, data_attributes, is_test_data):
     return data_values, predictions
 
 
-def load_and_process_data(datapath, n_components=1, do_normalize=False, is_test_data=False, attributes=None):
+def load_and_process_data(datapath, n_components=1, do_normalize=False):
     values = []
     predictions = []
     if (n_components == 1):
         file = arff.load(open(datapath))
         values = file['data']
-        if (attributes == None):
-            attributes = file['attributes']
+        attributes = file['attributes']
 
-        values, predictions = process_data(values, attributes, is_test_data)
+        values, predictions = process_data(values, attributes)
     else:
         for i in range(0, n_components):
             file = arff.load(open(datapath.split(".")[0] + str(i + 1) + "." + datapath.split(".")[1]))

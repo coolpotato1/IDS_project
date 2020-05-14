@@ -8,6 +8,7 @@ import feature_selection as feat
 import numpy as np
 import preprocessing as pre
 import dataset_manipulation as man
+import sys
 from keras.models import Sequential
 from keras.layers import Dense
 from keras import optimizers
@@ -19,7 +20,7 @@ from sklearn.decomposition import PCA
 from sklearn.feature_selection import RFE
 import classification_utils as cl
 import time
-N_COMPONENTS = 20
+N_COMPONENTS = 25
 TRAIN_DATA_PATH = "Datasets/UDPMitMKDDTrain.arff"
 TEST_DATASET = "UDPMitMKDDTest"
 TEST_DATA_PATH = "Datasets/" + TEST_DATASET + ".arff"
@@ -30,22 +31,28 @@ def NN_train(data, predictions):
     model.add(Dense(25, input_dim = len(data[0]), activation="relu"))
     model.add(Dense(12, activation="relu"))
     model.add(Dense(1, activation="sigmoid"))
-    adam = optimizers.adam(lr=0.002)
+    adam = optimizers.adam(lr=0.0002)
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(data, predictions, batch_size = 200, epochs = 20)
+    model.fit(data, predictions, batch_size = 20, epochs = 30)
     return model
 
 x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize=True)
 actual_classes =np.squeeze(man.csv_read("Datasets/" + TEST_DATASET + "_attacks"))
-x_test, y_test, attributes = pre.load_and_process_data(TEST_DATA_PATH, is_test_data = True, attributes = attributes, do_normalize=True)
+x_test, y_test, test_attributes = pre.load_and_process_data(TEST_DATA_PATH, do_normalize=True)
+
+# This check is done to ensure that the columns of the test and train datasets are in the same order, cause if not
+# it will ruin the entire classification
+if attributes != test_attributes:
+    print("your datasets are fucked")
+    sys.exit()
 #x_test = np.asarray(x_test).astype(np.float32)
 
 x_train = np.asarray(x_train).astype(np.float32)
 
 #x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2)
 
-#print("undersampling overrepresented class")
-#x_train, y_train = cl.sample(x_train, y_train, sampling_type="under")
+print("undersampling overrepresented class")
+#x_train, y_train = cl.sample(x_train, y_train, sampling_type="over")
 
 print("length of the training set is: ", len(x_train))
 print("length of test set is: ", len(x_test))
@@ -58,7 +65,6 @@ x_test = pca.transform(x_test)
 
 
 #clf = RandomForestClassifier(n_estimators = 150)
-#clf = SVC()
 
 
 #print("Doing RFE")
@@ -66,7 +72,7 @@ x_test = pca.transform(x_test)
 #x_train = rfe.fit_transform(x_train, y_train)
 #x_test = rfe.transform(x_test)
 #print("Finished RFE")
-print("Fitting classifier")
+#print("Fitting classifier")
 #clf.fit(x_train, y_train)
 
 #pre_train = time.time()
