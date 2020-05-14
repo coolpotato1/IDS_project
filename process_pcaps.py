@@ -20,7 +20,8 @@ ATTACK_PROTOCOL = "udp" if own_simulation else "udp"
 ATTACKER_IDS = "209:9:9:9" if own_simulation else ["0c", "0b", "09", "12", "18", "15", "13", "19", "17", "0f", "10", "11"]
 BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
 ATTACK_DELAY = 300 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
-ATTACK_TYPE = "UDP_DOS"
+ATTACK_TYPE = "UDP_DOS" if own_simulation else "sinkhole"
+NORMAL_TYPE = "UDP_normal" if own_simulation else "sinkhole_normal"
 data = pyshark.FileCapture("pcaps/normal5s-attacker8ps.pcap")
 out_file = "coojaData3"
 
@@ -229,7 +230,7 @@ def export_as_arff(flow_dict, file, sampling=None):
     arff.dump(export_arff, open("Datasets/" + file + ".arff", "w+"))
     print("exported datasets")
 
-    export_attacks([ATTACK_TYPE if flow_dict[key].flow_class == "anomaly" else "normal" for key in flow_dict],
+    export_attacks([ATTACK_TYPE if flow_dict[key].flow_class == "anomaly" else NORMAL_TYPE for key in flow_dict],
                    "Datasets/" + file + "_attacks")
 
 flows = get_flows(data)

@@ -73,4 +73,8 @@ class attack_types(enum.Enum):
 
     #Custom made attacks
     MITM = ["MitM"]
+    MITM_NORMAL = ["MitM_normal"]
     UDP_DOS = ["UDP_DOS"]
+    UDP_NORMAL = ["UDP_normal"]
+
+    ALL_NORMALS = NORMAL + MITM_NORMAL + UDP_NORMAL

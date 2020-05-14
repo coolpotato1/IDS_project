@@ -261,13 +261,15 @@ def get_specific_recall(clf, data, actual_classes, attack_types, keep_separated=
         # As we have separated by attack, all predictions should be one. Therefore we can find recall this way
         recalls.append(len([element for element in predictions if element == 1]) / len(predictions))
     else:
+        #This should work when normals are separated, think it will when normals are combined too. but dont combine normals and attacks
         for attack in attack_types:
             if is_nn:
                 predictions.append(np.squeeze(clf.predict_classes(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack]))))
             else:
                 predictions.append(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack]))))
 
-            if "normal" in attack:
+            # Refactor later, this only works because you are giving normals separately
+            if attack[0] in attacks.ALL_NORMALS.value:
                 predictions[-1] = [int(element == 0) for element in predictions[-1]]
 
             recalls.append(len([element for element in predictions[-1] if element == 1]) / len(predictions[-1]))
@@ -334,7 +336,7 @@ def export_attacks(attack_list, file):
 
 
 # Currently only deals with one attack type
-def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relation="Data", sampling=None):
+def packet_csv_to_arff(datafile_in, datafile_out, attack_type, normal_type, split=None, relation="Data", sampling=None):
     data = csv_read("Datasets/" + datafile_in + ".csv")
     attributes = data.pop(0)
     data, attributes = remove_nan_attributes(data, attributes)
@@ -348,8 +350,8 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, split=None, relat
         export_arff(train_data, attributes, datafile_out + "Train", relation=relation + "_Train")
         export_arff(test_data, attributes, datafile_out + "Test", relation=relation + "_Test")
 
-        export_attacks([attack_type if row[-1] == "anomaly" else "normal" for row in train_data], "Datasets/" + datafile_out + "Train_attacks")
-        export_attacks([attack_type if row[-1] == "anomaly" else "normal" for row in test_data], "Datasets/" + datafile_out + "Test_attacks")
+        export_attacks([attack_type if row[-1] == "anomaly" else normal_type for row in train_data], "Datasets/" + datafile_out + "Train_attacks")
+        export_attacks([attack_type if row[-1] == "anomaly" else normal_type for row in test_data], "Datasets/" + datafile_out + "Test_attacks")
 
     else:
         export_arff(data, attributes, datafile_out, relation=relation)
@@ -361,4 +363,4 @@ print("scripts run apparently")
 #create_filtered_dataset("KDDTest+", attacks.U2R.value + attacks.R2L.value)
 # write_attack_column("KDDTrain+_20Percent")
 #combine_datasets("combinedCoojas", "MitMKDDTrain", "UDPMitMKDDTrain")
-#packet_csv_to_arff("MitM", "MitM", "MitM", 0.2)
+#packet_csv_to_arff("MitM", "MitM", "MitM", "MitM_normal", 0.2, sampling="under")
