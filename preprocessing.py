@@ -174,7 +174,7 @@ def load_and_process_data(datapath, n_components=1, do_normalize=False):
             file = arff.load(open(datapath.split(".")[0] + str(i + 1) + "." + datapath.split(".")[1]))
             temp_data_values = file['data']
             attributes = file['attributes']
-            temp_values, temp_predictions = process_data(temp_data_values, attributes, is_test_data)
+            temp_values, temp_predictions = process_data(temp_data_values, attributes)
             values.extend(temp_values)
             predictions.extend(temp_predictions)
 

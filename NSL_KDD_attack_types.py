@@ -76,5 +76,6 @@ class attack_types(enum.Enum):
     MITM_NORMAL = ["MitM_normal"]
     UDP_DOS = ["UDP_DOS"]
     UDP_NORMAL = ["UDP_normal"]
-
-    ALL_NORMALS = NORMAL + MITM_NORMAL + UDP_NORMAL
+    SINKHOLE = ["sinkhole"]
+    SINKHOLE_NORMAL = ["sinkhole_normal"]
+    ALL_NORMALS = NORMAL + MITM_NORMAL + UDP_NORMAL + SINKHOLE_NORMAL

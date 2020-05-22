@@ -324,7 +324,6 @@ def export_arff(data, attributes, filename, relation="Data", description=None):
 
     arff.dump(exported_arff, open("Datasets/" + filename + ".arff", "w+"))
 
-
 def export_attacks(attack_list, file):
 
     f = open(file, "w+")
@@ -358,9 +357,32 @@ def packet_csv_to_arff(datafile_in, datafile_out, attack_type, normal_type, spli
         export_attacks([row[-1] for row in data], "Datasets/" + datafile_out + "_attacks")
 
 
+def change_udp_feature(kdd_dataset):
+    dataset = arff.load(open("Datasets/" + kdd_dataset + ".arff"))
+    data = dataset["data"]
+    label = dataset["attributes"].pop(-1)
+    dataset["attributes"].append(("usrc_bytes", "REAL"))
+    dataset["attributes"].append(("udst_bytes", "REAL"))
+    dataset["attributes"].append(label)
+    for row in data:
+        data_label = row.pop(-1)
+        row.extend([0, 0])
+        if row[1] == "udp":
+            row[-2] = row[4]
+            row[-1] = row[5]
+            row[4] = 0
+            row[5] = 0
+        row.append(data_label)
+
+
+    dataset["data"] = data
+    arff.dump(dataset, open("Datasets/" + kdd_dataset + ".arff", "w+"))
+    export_attacks(get_attack_column(kdd_dataset), "Datasets/" + kdd_dataset + "_attacks")
+
 
 print("scripts run apparently")
 #create_filtered_dataset("KDDTest+", attacks.U2R.value + attacks.R2L.value)
 # write_attack_column("KDDTrain+_20Percent")
-#combine_datasets("combinedCoojas", "MitMKDDTrain", "UDPMitMKDDTrain")
+#combine_datasets("svelteSinkhole3", "coojaData4", "svelteCoojaTest")
 #packet_csv_to_arff("MitM", "MitM", "MitM", "MitM_normal", 0.2, sampling="under")
+#change_udp_feature("KDDTrain+")

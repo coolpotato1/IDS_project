@@ -13,7 +13,7 @@ from _collections import defaultdict
 from dataset_manipulation import export_attacks
 # import asyncio
 # import nest_asyncio
-own_simulation = True
+own_simulation = False
 ATTACK_PROTOCOL = "udp" if own_simulation else "udp"
 #ATTACKER_IDS = "209:9:9:9" if own_simulation else ["19", "12", "17", "0c", "11", "0b", "15", "16", "10", "0d"]
 #ATTACKER_IDS = "209:9:9:9" if own_simulation else ["19", "18", "13"]
@@ -22,8 +22,8 @@ BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
 ATTACK_DELAY = 300 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
 ATTACK_TYPE = "UDP_DOS" if own_simulation else "sinkhole"
 NORMAL_TYPE = "UDP_normal" if own_simulation else "sinkhole_normal"
-data = pyshark.FileCapture("pcaps/normal5s-attacker8ps.pcap")
-out_file = "coojaData3"
+data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1587046554377.pcap")
+out_file = "svelteSinkhole3"
 
 class flow:
     src_bytes = 0
@@ -40,7 +40,7 @@ class flow:
     # This should probably be refactored at some point
     @staticmethod
     def get_flow_attributes():
-        return [("src_bytes", "REAL"), ("dst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmpv6"]),
+        return [("usrc_bytes", "REAL"), ("udst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmpv6"]),
                 ("dio_count", "REAL"), ("dao_count", "REAL"), ("dis_count", "REAL"), ("class", ["normal", "anomaly"])]
 
 
@@ -115,9 +115,9 @@ def add_packet_to_flows(flow_dict, packet, flow_length, flow_step, start_time):
     flows_to_add_packet = np.arange(current_flow_step, oldest_flow_step_included, -flow_step)
 
     # First one checks if necessary protocols are there and if it is at final destination for one protocol, second
-    # one checks for other protocols if they are at final destination. Should probably be refactered to one method.
+    # one checks for other protocols if they are at final destination. Should probably be refactored to one method.
     # The reason we check for final destination, is so that we do not count a packet after every hop
-    if not does_packet_fulfill_requirements(packet) or not is_packet_at_final_destination(packet):
+    if not does_packet_fulfill_requirements(packet):
         return
 
     protocol = get_protocol(packet)
@@ -128,9 +128,11 @@ def add_packet_to_flows(flow_dict, packet, flow_length, flow_step, start_time):
             1] + ";" + protocol
 
         flow_dict[flow_identifier].protocol = protocol
-        flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
-        flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
-        add_rpl_info(flow_dict[flow_identifier], packet)
+
+        if is_packet_at_final_destination(packet):
+            flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
+            flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+            add_rpl_info(flow_dict[flow_identifier], packet)
 
 
 def get_flows(raw_data):
@@ -141,7 +143,7 @@ def get_flows(raw_data):
             start_time = float(packet.sniff_timestamp)
             is_first = False
 
-        add_packet_to_flows(flow_dict, packet, flow_length=30, flow_step=1, start_time=start_time)
+        add_packet_to_flows(flow_dict, packet, flow_length=30, flow_step=5, start_time=start_time)
 
     return flow_dict
 

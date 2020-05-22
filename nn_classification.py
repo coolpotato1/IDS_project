@@ -10,7 +10,7 @@ import preprocessing as pre
 import dataset_manipulation as man
 import sys
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Dropout
 from keras import optimizers
 from NSL_KDD_attack_types import attack_types as attacks
 from sklearn.ensemble import RandomForestClassifier
@@ -21,19 +21,22 @@ from sklearn.feature_selection import RFE
 import classification_utils as cl
 import time
 N_COMPONENTS = 25
-TRAIN_DATA_PATH = "Datasets/combinedCoojas.arff"
-TEST_DATASET = "coojaData3"
+TRAIN_DATA_PATH = "Datasets/svelteUDPMitMKDDTrain.arff"
+TEST_DATASET = "svelteUDPMitMKDDTest"
 TEST_DATA_PATH = "Datasets/" + TEST_DATASET + ".arff"
 CSV_DATA_PATH = "Datasets/KDDTest+.txt"
 
 def NN_train(data, predictions):
     model = Sequential()
-    model.add(Dense(25, input_dim = len(data[0]), activation="relu"))
+    #model.add(Dropout(0.2, input_shape=(len(data[0]),)))
+    model.add(Dense(25, input_dim=len(data[0]), activation="relu"))
+    model.add(Dropout(0.5))
     model.add(Dense(12, activation="relu"))
+    model.add(Dropout(0.5))
     model.add(Dense(1, activation="sigmoid"))
-    adam = optimizers.adam(lr=0.0001)
+    adam = optimizers.adam(lr=0.001)
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(data, predictions, batch_size = 10, epochs = 30)
+    model.fit(data, predictions, batch_size = 200, epochs = 15)
     return model
 
 x_train, y_train, attributes = pre.load_and_process_data(TRAIN_DATA_PATH, do_normalize=True)
@@ -42,9 +45,9 @@ x_test, y_test, test_attributes = pre.load_and_process_data(TEST_DATA_PATH, do_n
 
 # This check is done to ensure that the columns of the test and train datasets are in the same order, cause if not
 # it will ruin the entire classification
-#if attributes != test_attributes:
-    #print("your datasets are fucked")
-    #sys.exit()
+if attributes != test_attributes:
+    print("your datasets are fucked")
+    sys.exit()
 #x_test = np.asarray(x_test).astype(np.float32)
 
 x_train = np.asarray(x_train).astype(np.float32)
@@ -52,16 +55,16 @@ x_train = np.asarray(x_train).astype(np.float32)
 #x_train, x_test, y_train, y_test = train_test_split(x_train, y_train, test_size=0.2)
 
 print("undersampling overrepresented class")
-#x_train, y_train = cl.sample(x_train, y_train)
+x_train, y_train = cl.sample(x_train, y_train, sampling_type="over")
 
 print("length of the training set is: ", len(x_train))
 print("length of test set is: ", len(x_test))
 print("Getting to PCA")
-#pca = PCA(N_COMPONENTS)
-#pca.fit(x_train)
-#print("The variance explained is: ", str(np.sum(pca.explained_variance_ratio_)))
-#x_train = pca.transform(x_train)
-#x_test = pca.transform(x_test)
+pca = PCA(N_COMPONENTS)
+pca.fit(x_train)
+print("The variance explained is: ", str(np.sum(pca.explained_variance_ratio_)))
+x_train = pca.transform(x_train)
+x_test = pca.transform(x_test)
 
 
 #clf = RandomForestClassifier(n_estimators = 150)
@@ -88,5 +91,6 @@ print("Recall is: ", recall)
 print("Fscore is: ", fscore)
 print("Overall accuracy is: ", accuracy)
 #print("normal results are:", results)
-print("specific recalls are:", man.get_specific_recall(clf, x_test, actual_classes,
-                                                       [attacks.UDP_NORMAL.value, attacks.UDP_DOS.value], keep_separated=True))
+print(man.get_specific_recall(clf, x_test, actual_classes, [attacks.NORMAL.value, attacks.MITM_NORMAL.value,
+                                                       attacks.UDP_NORMAL.value, attacks.SINKHOLE_NORMAL.value, attacks.DOS.value, attacks.PROBE.value, attacks.MITM.value,
+                                                                                     attacks.UDP_DOS.value, attacks.SINKHOLE.value], keep_separated=True))
