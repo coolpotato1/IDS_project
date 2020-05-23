@@ -377,12 +377,27 @@ def change_udp_feature(kdd_dataset):
 
     dataset["data"] = data
     arff.dump(dataset, open("Datasets/" + kdd_dataset + ".arff", "w+"))
-    export_attacks(get_attack_column(kdd_dataset), "Datasets/" + kdd_dataset + "_attacks")
+
+
+def combine_multiple_datasets(*args):
+    is_first = True
+    for arg in args:
+        if is_first == True:
+            first_file = arg
+            is_first = False
+            continue
+
+        second_file = arg
+        out_file = second_file + first_file
+        combine_datasets(second_file, first_file, out_file)
+        first_file = out_file
+
 
 
 print("scripts run apparently")
 #create_filtered_dataset("KDDTest+", attacks.U2R.value + attacks.R2L.value)
 # write_attack_column("KDDTrain+_20Percent")
-#combine_datasets("svelteSinkhole3", "coojaData4", "svelteCoojaTest")
+#combine_datasets("svelteSinkhole3", "UDPMitMKDDTest", "svelteUDPMitMKDDTest")
 #packet_csv_to_arff("MitM", "MitM", "MitM", "MitM_normal", 0.2, sampling="under")
-#change_udp_feature("KDDTrain+")
+#change_udp_feature("KDDTest+_filtered")
+#combine_multiple_datasets("KDDTest+_filtered", "MitMTest", "coojaData4", "svelteSinkhole3")

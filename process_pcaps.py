@@ -22,6 +22,8 @@ BORDER_ID = "201:1:1:1" if own_simulation else "01:1:101"
 ATTACK_DELAY = 300 - 1 if own_simulation else 0 # Minus a second, because to find the start of the attack, we use the first packets timestamp, which is likely not 0
 ATTACK_TYPE = "UDP_DOS" if own_simulation else "sinkhole"
 NORMAL_TYPE = "UDP_normal" if own_simulation else "sinkhole_normal"
+FLOW_LENGTH = 30
+FLOW_STEP = 5
 data = pyshark.FileCapture("SVELTE_pcaps/radiolog-1587046554377.pcap")
 out_file = "svelteSinkhole3"
 
@@ -33,15 +35,19 @@ class flow:
     dio_count = 0
     dao_count = 0
     dis_count = 0
+    usrc_bytes = 0
+    udst_bytes = 0
 
     def get_flow_as_list(self):
-        return [self.src_bytes, self.dst_bytes, self.protocol, self.dio_count, self.dao_count, self.dis_count, self.flow_class]
+        return [self.src_bytes, self.dst_bytes, self.protocol, self.dio_count, self.dao_count, self.dis_count,
+                self.usrc_bytes, self.udst_bytes, self.flow_class]
 
     # This should probably be refactored at some point
     @staticmethod
     def get_flow_attributes():
-        return [("usrc_bytes", "REAL"), ("udst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmpv6"]),
-                ("dio_count", "REAL"), ("dao_count", "REAL"), ("dis_count", "REAL"), ("class", ["normal", "anomaly"])]
+        return [("src_bytes", "REAL"), ("dst_bytes", "REAL"), ("protocol_type", ["tcp", "udp", "icmpv6"]),
+                ("dio_count", "REAL"), ("dao_count", "REAL"), ("dis_count", "REAL"), ("usrc_bytes", "REAL"), ("udst_bytes", "REAL"),
+                ("class", ["normal", "anomaly"])]
 
 
 # Husk at ændre 0 og 43
@@ -130,21 +136,29 @@ def add_packet_to_flows(flow_dict, packet, flow_length, flow_step, start_time):
         flow_dict[flow_identifier].protocol = protocol
 
         if is_packet_at_final_destination(packet):
-            flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
-            flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+            if protocol != "udp":
+                flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
+                flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+            else:
+                flow_dict[flow_identifier].udst_bytes += int(packet.ipv6.plen) if is_reversed else 0
+                flow_dict[flow_identifier].usrc_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+
             add_rpl_info(flow_dict[flow_identifier], packet)
 
 
 def get_flows(raw_data):
     flow_dict = defaultdict(flow)
     is_first = True
+    counter = 0
     for packet in raw_data:
         if is_first:
             start_time = float(packet.sniff_timestamp)
             is_first = False
 
-        add_packet_to_flows(flow_dict, packet, flow_length=30, flow_step=5, start_time=start_time)
-
+        add_packet_to_flows(flow_dict, packet, FLOW_LENGTH, FLOW_STEP, start_time=start_time)
+        counter += 1
+        if counter % 1000 == 0:
+            print("packets processed: ", counter)
     return flow_dict
 
 
