@@ -21,7 +21,7 @@ from sklearn.feature_selection import RFE
 import classification_utils as cl
 import time
 
-N_COMPONENTS = 30
+N_COMPONENTS = 40
 TRAIN_DATA_PATH = "Datasets/svelteSinkhole12combinedCoojasMitMTrainKDDTrain+_filtered.arff"
 TEST_DATASET = "svelteSinkhole3coojaData4MitMTestKDDTest+_filtered"
 TEST_DATA_PATH = "Datasets/" + TEST_DATASET + ".arff"
@@ -31,16 +31,16 @@ CSV_DATA_PATH = "Datasets/KDDTest+.txt"
 def NN_train(data, predictions):
     model = Sequential()
     # model.add(Dropout(0.2, input_shape=(len(data[0]),)))
-    model.add(Dense(80, input_dim=len(data[0]), activation="relu"))
-    model.add(Dropout(0.8))
-    model.add(Dense(100, input_dim=len(data[0]), activation="relu"))
-    model.add(Dropout(0.3))
-    model.add(Dense(50, input_dim=len(data[0]), activation="relu"))
-    model.add(Dropout(0.3))
+    #model.add(Dense(80, input_dim=len(data[0]), activation="relu"))
+    #model.add(Dropout(0.8))
+    #model.add(Dense(48, input_dim=len(data[0]), activation="relu"))
+    #model.add(Dropout(0.5))
+    model.add(Dense(300, input_dim=len(data[0]), activation="relu"))
+    model.add(Dropout(0.5))
     model.add(Dense(1, activation="sigmoid"))
-    adam = optimizers.adam(lr=0.001)
+    adam = optimizers.adam(lr=0.0002)
     model.compile(loss='binary_crossentropy', optimizer=adam, metrics=['accuracy'])
-    model.fit(data, predictions, batch_size=200, epochs=40)
+    model.fit(data, predictions, batch_size=200, epochs=30)
     return model
 
 
@@ -64,7 +64,7 @@ print("undersampling overrepresented class")
 
 print("length of the training set is: ", len(x_train))
 print("length of test set is: ", len(x_test))
-print("Getting to PCA")
+#print("Getting to PCA")
 #pca = PCA(N_COMPONENTS)
 #pca.fit(x_train)
 #print("The variance explained is: ", str(np.sum(pca.explained_variance_ratio_)))
