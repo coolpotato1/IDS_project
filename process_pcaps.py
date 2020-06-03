@@ -8,6 +8,7 @@ import arff
 import pyshark
 import re
 import numpy as np
+import sys
 from classification_utils import sample_data
 from _collections import defaultdict
 from dataset_manipulation import export_attacks
@@ -249,8 +250,47 @@ def export_as_arff(flow_dict, file, sampling=None):
     export_attacks([ATTACK_TYPE if flow_dict[key].flow_class == "anomaly" else NORMAL_TYPE for key in flow_dict],
                    "Datasets/" + file + "_attacks")
 
-flows = get_flows(data)
-label_flows(flows)
-export_as_arff(flows, out_file)
+def add_packet_to_live_flows(flow_dict, packet):
+    protocol = get_protocol(packet)
+    is_reversed, temp_flow_identifier = sort_addresses(packet.ipv6.src, packet.ipv6.dst)
+
+    #remember to add time stamp
+    flow_identifier = temp_flow_identifier[0] + ";" + temp_flow_identifier[
+            1] + ";" + protocol
+
+    flow_dict[flow_identifier].protocol = protocol
+
+    if is_packet_at_final_destination(packet):
+        if protocol != "udp":
+            flow_dict[flow_identifier].dst_bytes += int(packet.ipv6.plen) if is_reversed else 0
+            flow_dict[flow_identifier].src_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+        else:
+            flow_dict[flow_identifier].udst_bytes += int(packet.ipv6.plen) if is_reversed else 0
+            flow_dict[flow_identifier].usrc_bytes += int(packet.ipv6.plen) if not is_reversed else 0
+
+        add_rpl_info(flow_dict[flow_identifier], packet)
+
+
+def live_process_packets(flow_step, flow_length):
+    flows = {}
+    is_first = True
+    capture = pyshark.LiveCapture(interface="eth1", bpf_filter="ip and port 80")
+    while True:
+        capture.sniff(timeout=flow_step)
+        for packet in capture:
+            add_packet_to_live_flows(flows, packet)
+
+        print(flows)
+
+
+#flows = get_flows(data)
+#label_flows(flows)
+
+#export_as_arff(flows, out_file)
+
+
+live_process_packets(5, 30)
+
+
 print("debugging point")
 

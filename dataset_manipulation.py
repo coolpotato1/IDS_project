@@ -55,8 +55,17 @@ def create_filtered_dataset(file_name, filtered_attacks):
 def csv_read(datapath):
     with open(datapath) as file:
         data = csv.reader(file)
-        return [row for row in data]
+        return [row for row in data if len(row) != 0]
 
+#for 2-dimensional arrays
+def csv_write(dataset, outfile):
+    with open(outfile, "w+") as file:
+        writer = csv.writer(file)
+        for row in dataset:
+            if type(row) == list:
+                writer.writerow(row)
+            else:
+                writer.writerow([row])
 
 # Deprecated (somewhat)
 def get_attack_column(dataset):

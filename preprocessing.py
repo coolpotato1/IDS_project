@@ -13,7 +13,7 @@ import math
 import gensim
 from itertools import islice
 from collections import defaultdict
-from dataset_manipulation import get_attack_column
+from dataset_manipulation import get_attack_column, csv_write
 
 # Define constants here
 N_OBSERVATIONS_REQUIRED = 100
@@ -135,7 +135,7 @@ def remove_useless_columns(data):
     return return_data
 
 
-def normalize(data):
+def normalize(data, attributes=None, export_data=False):
     # Remove columns where values are constant, done on min and diff arrays too, so dimensions fit for normalization.
     return_data = np.asarray(data).astype(np.float32)
     max_values = np.amax(return_data, axis=0)
@@ -144,6 +144,13 @@ def normalize(data):
 
     return_data = (return_data - min_values) / difference
     return_data = np.nan_to_num(return_data)
+
+    if export_data:
+        configurations = []
+        configurations.append(min_values)
+        configurations.append(difference)
+        csv_write(configurations, "normalization")
+
     return return_data
 
 
@@ -160,7 +167,7 @@ def process_data(data_values, data_attributes):
     return data_values, predictions
 
 
-def load_and_process_data(datapath, n_components=1, do_normalize=False):
+def load_and_process_data(datapath, n_components=1, do_normalize=False, export_configuration=False):
     values = []
     predictions = []
     if (n_components == 1):
@@ -179,7 +186,7 @@ def load_and_process_data(datapath, n_components=1, do_normalize=False):
             predictions.extend(temp_predictions)
 
     if (do_normalize):
-        return normalize(values), predictions, attributes
+        return normalize(values, attributes, export_configuration), predictions, attributes
     else:
         return values, predictions, attributes
 
