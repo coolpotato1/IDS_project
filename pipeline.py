@@ -1,13 +1,6 @@
 from io import BufferedWriter, RawIOBase
+import numpy as np
+import socket
 
-writer = BufferedWriter(open("test", "wb"))
-list = [3,4]
-count = 0
-while True:
-    writer.write(bytearray(list))
-    count +=1
-    if count == 100:
-        writer.flush()
-        break
 
-writer.close()
+message = np.asarray([i % 2 for i in range(101)]).astype(np.float32).tobytes()

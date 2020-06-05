@@ -12,10 +12,16 @@ import re
 import numpy as np
 import sys
 import time
+import socket
 from _collections import defaultdict
 from preprocessing import process_data
 FLOW_LENGTH = 30
 FLOW_STEP = 5
+
+SERVER_ADDRESS = "127.0.0.1"
+SERVER_PORT = 2525
+
+CLIENT_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
 class flow:
@@ -75,8 +81,14 @@ def sort_addresses(src_ip, dest_ip):
 
 def csv_read(datapath):
     with open(datapath) as file:
-        data = csv.reader(file)
-        return [row for row in data if len(row) != 0]
+        reader = csv.reader(file)
+        data = [row for row in reader if len(row) != 0]
+        return_data = []
+        for row in data:
+            row = row[0].split(" ")
+            return_data.append([re.sub('\D', '', element) for element in row])
+
+        return return_data
 
 
 #this is needed because the ips in old cooja are stupid
@@ -219,7 +231,7 @@ def combine_and_remove_flows(flow_dict, oldest_flow_step):
     for key in flow_dict:
         new_key = re.sub("[^;]+;", "", key, 1)
         combined_flows[new_key] += flow_dict[key]
-        if oldest_flow_step in key:
+        if oldest_flow_step == key:
             del flow_dict[key]
 
     return combined_flows
@@ -232,13 +244,18 @@ def update_current_and_old_timeslot(start_time, flow_step, flow_length, packet):
 
     return current_time_slot, oldest_time_slot
 
+def send_data(data):
+    sent_data = data.astype(np.float32).tobytes()
+    CLIENT_SOCKET.sendto(sent_data, (SERVER_ADDRESS, SERVER_PORT))
+    print("message sent")
 
 def process_and_send_flows(combined_flows, attributes, normalization_values):
+    normalization_values = np.asarray(normalization_values).astype(np.float32)
     flow_list = []
     flow_names = [flow_attribute[0] for flow_attribute in flow.get_flow_attributes()]
     indexes = []
     for name in flow_names:
-        indexes.append(i for i in range(len(attributes)) if attributes[i][0] == name)
+        indexes.append([i for i in range(len(attributes)) if attributes[i][0] == name][0])
     temp_list = ["None" if type(attribute[1]) == list else 0 for attribute in attributes]
     for key in combined_flows:
         flow_list.append(temp_list)
@@ -246,11 +263,12 @@ def process_and_send_flows(combined_flows, attributes, normalization_values):
         for i in range(len(new_values)):
             flow_list[-1][indexes[i]] = new_values[i]
 
-    data = process_data(flow_list, attributes)
+    #Function returns predictions too, not needed online
+    data, useless = process_data(flow_list, attributes)
+    data = np.asarray(data).astype(np.float32)
     data = (data - normalization_values[0]) / normalization_values[1]
     data = np.nan_to_num(data)
-
-    print(data)
+    send_data(data)
 
 
 # Probably update such that timestamps correspond to processed time and not sniff time, so it works with "last_sent"
@@ -262,6 +280,8 @@ def live_process_packets(flow_step, flow_length, attribute_file, normalization_f
     capture = pyshark.LiveCapture(interface="eth1", bpf_filter="ip and udp port 80")
     attributes = arff.load(open(attribute_file))["attributes"]
     normalization_parameters = csv_read(normalization_file)
+
+
     while True:
         capture.sniff(timeout=flow_step)
         count = 0
@@ -282,8 +302,9 @@ def live_process_packets(flow_step, flow_length, attribute_file, normalization_f
                 print("packets processed ", count)
 
             if time.time() - last_sent > flow_step:
-                combined_flows = combine_and_remove_flows(flow_step, oldest_flow_step)
+                combined_flows = combine_and_remove_flows(flows, oldest_flow_step)
                 process_and_send_flows(combined_flows, attributes, normalization_parameters)
+                last_sent = time.time()
 
 
 

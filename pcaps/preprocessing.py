@@ -29,6 +29,7 @@ def one_hot_encode(column, column_no, attributes):
 def one_hot_insert(data, data_attributes, column_no):
     one_hot_values = one_hot_encode([row[column_no] for row in data], column_no, data_attributes)
     # If you run into memory issues, rewrite to use list methods instead of numpy
+    data = np.asarray(data)
     left, delete, right = np.split(data, [column_no, column_no + 1], axis=1)
     data_return = np.concatenate((left, one_hot_values, right), axis=1)
 
@@ -48,6 +49,7 @@ def binary_insert(data, data_attributes, column_no):
     for row in data:
         binary_columns.append([char for char in values[row[column_no]]])
 
+    data = np.asarray(data)
     left, delete, right = np.split(data, [column_no, column_no + 1], axis=1)
     data_return = np.concatenate((left, binary_columns, right), axis=1)
 
