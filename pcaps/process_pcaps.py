@@ -18,7 +18,7 @@ from preprocessing import process_data
 FLOW_LENGTH = 30
 FLOW_STEP = 5
 
-SERVER_ADDRESS = "127.0.0.1"
+SERVER_ADDRESS = "192.168.100.2"
 SERVER_PORT = 2525
 
 CLIENT_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -86,7 +86,7 @@ def csv_read(datapath):
         return_data = []
         for row in data:
             row = row[0].split(" ")
-            return_data.append([re.sub('\D', '', element) for element in row])
+            return_data.append([re.sub('[^A-Za-z0-9+\.]+', '', element) for element in row])
 
         return return_data
 
