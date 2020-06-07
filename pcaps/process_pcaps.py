@@ -209,7 +209,7 @@ def add_packet_to_live_flows(flow_dict, packet, current_time_slot, flow_step):
     protocol = get_protocol(packet)
     is_reversed, temp_flow_identifier = sort_addresses(packet.ip.src, packet.ip.dst)
 
-    flow_identifier = str(current_time_slot) + temp_flow_identifier[0] + ";" + temp_flow_identifier[
+    flow_identifier = str(current_time_slot) + ";" + temp_flow_identifier[0] + ";" + temp_flow_identifier[
             1] + ";" + protocol
 
     flow_dict[flow_identifier].protocol = protocol
@@ -228,11 +228,22 @@ def add_packet_to_live_flows(flow_dict, packet, current_time_slot, flow_step):
 # such that they are not included in future flow calculations
 def combine_and_remove_flows(flow_dict, oldest_flow_step):
     combined_flows = defaultdict(flow)
+    key_to_be_deleted = ""
+    delete_key = False
+    print(len(flow_dict))
     for key in flow_dict:
         new_key = re.sub("[^;]+;", "", key, 1)
+        time_stamp = float(re.search("^[^;]+", key).group(0))
         combined_flows[new_key] += flow_dict[key]
-        if oldest_flow_step == key:
-            del flow_dict[key]
+
+        # Refactor this
+        if oldest_flow_step == time_stamp:
+            delete_key = True
+            key_to_be_deleted = key
+
+    if delete_key:
+        del flow_dict[key_to_be_deleted]
+        delete_key = False
 
     return combined_flows
 
@@ -277,7 +288,7 @@ def live_process_packets(flow_step, flow_length, attribute_file, normalization_f
     is_first = True
     last_sent = None
     oldest_flow_step = "Not_initialized"
-    capture = pyshark.LiveCapture(interface="eth1", bpf_filter="ip and udp port 80")
+    capture = pyshark.LiveCapture(interface="eth1", bpf_filter="ip and port 80")
     attributes = arff.load(open(attribute_file))["attributes"]
     normalization_parameters = csv_read(normalization_file)
 
