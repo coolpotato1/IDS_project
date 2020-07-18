@@ -5,12 +5,16 @@ Created on Tue Mar  3 11:19:56 2020
 @author: Henning
 """
 import csv
+import time
+
 import arff
 import numpy as np
 import classification_utils as u
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import precision_recall_fscore_support, confusion_matrix
 from sklearn.model_selection import train_test_split
 from NSL_KDD_attack_types import attack_types as attacks
+import seaborn as sn
+import matplotlib.pyplot as plt
 
 
 def get_filter_indices(filtered_attacks, data_path):
@@ -205,21 +209,30 @@ def combine_datasets(dataset1, dataset2, combinedDataset, sampling=None):
     file.close()
     arff.dump(return_arff, open("Datasets/" + combinedDataset + ".arff", "w+"))
 
+def custom_confusion_matrix(confusion_matrix):
+    sn.heatmap(confusion_matrix, annot=True, cmap="Blues", xticklabels=["normal", "anomaly"], yticklabels=["normal", "anomaly"], vmin=0, vmax=1)
+    plt.title("Normalized confusion matrix for the combined dataset")
+    plt.ylabel("True class")
+    plt.xlabel("Predicted class")
 
-def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, fscore_beta = 1, is_nn = True):
+    plt.show()
+
+def get_normal_and_anomaly_scores(model, test_data, actual_classes=None, fscore_beta = 1, is_nn = True, plot_confusion=False):
     # If no actual classes are given, its because they are part of the data, and we should extract them
     if actual_classes is None:
         actual_classes = [row.pop(-1) for row in test_data]
 
-    if is_nn:
-        predicted_classes = model.predict_classes(test_data)
-    else:
-        predicted_classes = model.predict(test_data)
+    pre_test = time.time()
+    predicted_classes = model.predict(test_data) > 0.45
+    post_test = time.time()
+
     precision, recall, fscore, count = precision_recall_fscore_support(actual_classes, predicted_classes, beta=fscore_beta, average="binary")
+    if(plot_confusion):
+        cm = confusion_matrix(actual_classes, predicted_classes, normalize='true')
+        custom_confusion_matrix(cm)
     accuracy = len([i for i in range(len(predicted_classes)) if predicted_classes[i] == actual_classes[i]])/len(actual_classes)
 
     return precision, recall, fscore, accuracy
-
 
 # Currently this one only works on NSL-KDD datasets
 def get_specific_scores(datapath, clf, data, actual_class, attack_types, keep_separated=False):
@@ -263,7 +276,7 @@ def get_specific_recall(clf, data, actual_classes, attack_types, keep_separated=
             predictions = [int(element == 0) for element in predictions]
 
         if is_nn:
-            predictions.extend(np.squeeze(clf.predict_classes(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack_types]))))
+            predictions.extend(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack_types])) > 0.45))
         else:
             predictions.extend(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack_types]))))
 
@@ -273,7 +286,7 @@ def get_specific_recall(clf, data, actual_classes, attack_types, keep_separated=
         #This should work when normals are separated, think it will when normals are combined too. but dont combine normals and attacks
         for attack in attack_types:
             if is_nn:
-                predictions.append(np.squeeze(clf.predict_classes(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack]))))
+                predictions.append(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack])) > 0.45))
             else:
                 predictions.append(np.squeeze(clf.predict(np.asarray([data[i] for i in range(len(actual_classes)) if actual_classes[i] in attack]))))
 
@@ -284,6 +297,19 @@ def get_specific_recall(clf, data, actual_classes, attack_types, keep_separated=
             recalls.append(len([element for element in predictions[-1] if element == 1]) / len(predictions[-1]))
 
     return recalls
+
+def get_recall_and_fpr(clf, data, labels, threshold):
+    print(threshold)
+    predictions = clf.predict(data) >= threshold
+    total_negatives = len([i for i in labels if i == 0])
+    total_positives = len([i for i in labels if i == 1])
+
+    true_positives = len([1 for i in range(len(predictions)) if predictions[i] == labels[i] and predictions[i] == 1])
+    false_positives = len([1 for i in range(len(predictions)) if predictions[i] != labels[i] and predictions[i] == 1])
+
+    recall = true_positives / total_positives
+    fpr = false_positives / total_negatives
+    return recall, fpr
 
 
 def remove_nan_attributes(data, attributes):

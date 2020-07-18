@@ -3,7 +3,7 @@
 
 @ATTRIBUTE src_bytes REAL
 @ATTRIBUTE dst_bytes REAL
-@ATTRIBUTE protocol_type {tcp, udp, icmpv6}
+@ATTRIBUTE protocol_type {tcp, udp, icmpv6, None}
 @ATTRIBUTE dio_count REAL
 @ATTRIBUTE dao_count REAL
 @ATTRIBUTE dis_count REAL

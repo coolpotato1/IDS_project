@@ -62,6 +62,7 @@ class flow:
 # Husk at ændre 0 og 43
 transport_protocols = {
     # "0": "Hop-by-hop Option",
+    "1": "icmp",
     "6": "tcp",
     "17": "udp",
     # "43": "Routing header for ipv6",
@@ -215,8 +216,8 @@ def add_packet_to_live_flows(flow_dict, packet, current_time_slot, flow_step):
     flow_dict[flow_identifier].protocol = protocol
 
     if protocol != "udp":
-        flow_dict[flow_identifier].dst_bytes += int(packet.ip.plen) if is_reversed else 0
-        flow_dict[flow_identifier].src_bytes += int(packet.ip.plen) if not is_reversed else 0
+        flow_dict[flow_identifier].dst_bytes += int(packet.ip.len) if is_reversed else 0
+        flow_dict[flow_identifier].src_bytes += int(packet.ip.len) if not is_reversed else 0
     else:
         flow_dict[flow_identifier].udst_bytes += int(packet.ip.len) if is_reversed else 0
         flow_dict[flow_identifier].usrc_bytes += int(packet.ip.len) if not is_reversed else 0
@@ -228,22 +229,22 @@ def add_packet_to_live_flows(flow_dict, packet, current_time_slot, flow_step):
 # such that they are not included in future flow calculations
 def combine_and_remove_flows(flow_dict, oldest_flow_step):
     combined_flows = defaultdict(flow)
-    key_to_be_deleted = ""
+    keys_to_be_deleted = []
     delete_key = False
-    print(len(flow_dict))
+    print("length of dict is: ", len(flow_dict))
     for key in flow_dict:
         new_key = re.sub("[^;]+;", "", key, 1)
         time_stamp = float(re.search("^[^;]+", key).group(0))
         combined_flows[new_key] += flow_dict[key]
 
         # Refactor this
-        if oldest_flow_step == time_stamp:
+        if oldest_flow_step >= time_stamp:
             delete_key = True
-            key_to_be_deleted = key
+            keys_to_be_deleted.append(key)
 
     if delete_key:
-        del flow_dict[key_to_be_deleted]
-        delete_key = False
+        for key in keys_to_be_deleted:
+            del flow_dict[key]
 
     return combined_flows
 
@@ -288,33 +289,41 @@ def live_process_packets(flow_step, flow_length, attribute_file, normalization_f
     is_first = True
     last_sent = None
     oldest_flow_step = "Not_initialized"
-    capture = pyshark.LiveCapture(interface="eth1", bpf_filter="ip and port 80")
+    capture = pyshark.LiveCapture(interface="eth1", bpf_filter="udp and port 80")
     attributes = arff.load(open(attribute_file))["attributes"]
+    print("Finished loading arff")
     normalization_parameters = csv_read(normalization_file)
-
-
+    packet_time = 0
+    timings = []
     while True:
         capture.sniff(timeout=flow_step)
         count = 0
         if len(capture) == 0:
+            print("Still no data...")
             continue
 
         for packet in capture:
             if is_first:
+                print("Received a packet")
                 start_time = float(packet.sniff_timestamp)
                 is_first = False
                 last_sent = time.time()
 
+            packet_start = time.time()
             current_step, oldest_flow_step = update_current_and_old_timeslot(start_time, flow_step, flow_length, packet)
             add_packet_to_live_flows(flows, packet, current_step, flow_step)
-            count +=1
-
-            if count % 1000 == 0:
-                print("packets processed ", count)
+            packet_time += time.time() - packet_start
+            count += 1
 
             if time.time() - last_sent > flow_step:
+                flow_start = time.time()
                 combined_flows = combine_and_remove_flows(flows, oldest_flow_step)
                 process_and_send_flows(combined_flows, attributes, normalization_parameters)
+                flow_time = time.time() - flow_start
+                timings.append(flow_time + packet_time)
+                if len(timings) == 20:
+                    print(timings)
+                packet_time = 0
                 last_sent = time.time()
 
 
