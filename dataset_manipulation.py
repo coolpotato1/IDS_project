@@ -132,7 +132,7 @@ def combine_and_return_attacks(dataset1, dataset2):
     return attacks1 + attacks2
 
 
-# This method definitely needs to be refactored, holy fuck its ugly. This has probably added +5 hours to technical debt.
+# This method definitely needs to be refactored. This has probably added +5 hours to technical debt.
 def combine_datasets(dataset1, dataset2, combinedDataset, sampling=None):
     file1 = arff.load(open("Datasets/" + dataset1 + ".arff"))
     file2 = arff.load(open("Datasets/" + dataset2 + ".arff"))
